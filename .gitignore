@@ -1,0 +1,10 @@
+/build/
+/out/
+
+*.code-workspace
+.vscode/
+.idea/
+
+*.exe
+*.so
+*.dylib
