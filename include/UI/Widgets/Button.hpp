@@ -1,0 +1,39 @@
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <Core/AppContext.hpp>
+#include <Core/Constants.hpp>
+#include <UI/Shapes/RoundedRectangleShape.hpp>
+#include <string>
+
+class Button {
+private:
+    AppContext&           ctx;
+    sf::Text              text;
+    RoundedRectangleShape shape;
+
+    sf::Color idleColor;
+    sf::Color pressedColor;
+    sf::Color hoverColor;
+    sf::Color textColor;
+    
+    bool isHovered = false;
+    bool isPressed = false;
+
+public:
+    Button(AppContext& context, const std::string& label, 
+           sf::Vector2f pos, 
+           sf::Vector2f size = {Config::UI::BUTTON_WIDTH, Config::UI::BUTTON_HEIGHT});
+
+
+    void setPosition(sf::Vector2f pos);
+    void setSize(sf::Vector2f size);
+    void setColors(sf::Color idle, sf::Color hover, sf::Color pressed, sf::Color textCol);
+    void setLabel(const std::string& label);
+
+    void update(sf::Vector2i mousePos);
+    bool isClicked(const sf::Event& event);
+    void draw();
+
+private:
+    void centerText();
+};
