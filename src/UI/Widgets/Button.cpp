@@ -9,7 +9,9 @@ Button::Button(AppContext& context, const std::string& label,
     idleColor(Config::UI::Colors::ButtonIdle),
     hoverColor(Config::UI::Colors::ButtonHover),
     textColor(Config::UI::Colors::ButtonText),
-    pressedColor(Config::UI::Colors::ButtonPressed)
+    pressedColor(Config::UI::Colors::ButtonPressed),
+    outlineColor(Config::UI::Colors::ButtonOutline),
+    hoverOutlineColor(Config::UI::Colors::ButtonOutlineHover)
 {
     shape.setPosition        (pos);
     shape.setOutlineThickness(Config::UI::BUTTON_OUTLINE);
@@ -60,29 +62,38 @@ void Button::centerText() {
 void Button::update(sf::Vector2i mousePos) {
     isHovered = shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos));
     
+    bool mouseHeld = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+
     if (isHovered) {
-        shape.setOutlineColor(sf::Color(180, 180, 180)); 
+        shape.setOutlineColor(hoverOutlineColor); 
         
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-            isPressed = true; 
-            shape.setFillColor(pressedColor); 
+        if (mouseHeld && isPressed) {
+            shape.setFillColor(pressedColor);
         } else {
             isPressed = false; 
             shape.setFillColor(hoverColor);
         }
     } else {
         isPressed = false; 
-        shape.setOutlineColor(Config::UI::Colors::ButtonOutline); 
+        shape.setOutlineColor(outlineColor); 
         shape.setFillColor(idleColor);
     }
 }
 
 bool Button::isClicked(const sf::Event& event) {
+    if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonPressed>()) {
+        if (mouseEvent->button == sf::Mouse::Button::Left && isHovered) {
+            isPressed = true; 
+        }
+    }
+
     if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (mouseEvent->button == sf::Mouse::Button::Left) {
-            if (isHovered) {
+            if (isHovered && isPressed) {
+                isPressed = false;
                 return true; 
             }
+            isPressed = false;
         }
     }
     return false;

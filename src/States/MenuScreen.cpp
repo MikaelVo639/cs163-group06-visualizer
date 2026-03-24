@@ -11,10 +11,14 @@ MenuScreen::MenuScreen(AppContext& context):
     title(context.font,    "DSA VISUALIZER",    70)
 {
     initTitle();
+    btnExit.setColors(Config::UI::Colors::ButtonIdle, 
+                      Config::UI::Colors::ButtonHover, 
+                      Config::UI::Colors::ButtonPressed, 
+                      sf::Color::Red);
 }
 
 void MenuScreen::initTitle() {
-    title.setFillColor(sf::Color::White);
+    title.setFillColor(sf::Color(173, 216, 230));
     title.setStyle(sf::Text::Bold);
 
     sf::FloatRect bounds = title.getLocalBounds();

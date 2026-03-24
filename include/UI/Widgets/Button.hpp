@@ -15,9 +15,12 @@ private:
     sf::Color pressedColor;
     sf::Color hoverColor;
     sf::Color textColor;
+    sf::Color outlineColor;
+    sf::Color hoverOutlineColor;
     
-    bool isHovered = false;
-    bool isPressed = false;
+    bool isHovered  = false;
+    bool canPressed = false;
+    bool isPressed  = false;
 
 public:
     Button(AppContext& context, const std::string& label, 
