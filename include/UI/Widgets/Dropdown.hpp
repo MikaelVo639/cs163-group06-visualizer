@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
+#include <Core/AppContext.hpp>
 #include <vector>
 #include <string>
 
@@ -10,20 +11,24 @@ namespace Widgets {
 
 class Dropdown {
 public:
-    Dropdown(sf::Vector2f position, sf::Vector2f size, const sf::Font& font, const std::vector<std::string>& options);
+    Dropdown(AppContext& context, const std::string& label, sf::Vector2f position, sf::Vector2f size, const std::vector<std::string>& options);
 
-    void handleEvent(const sf::Event::MouseButtonPressed& event, const sf::RenderWindow& window);
-    void draw(sf::RenderWindow& window) const;
+    void handleEvent(const sf::Event::MouseButtonPressed& event);
+    void update(sf::Vector2i mousePos);
+    void draw() const;
 
     bool getIsDropped() const;
     int getSelectedIndex() const;
     std::string getSelectedText() const;
 
 private:
+    AppContext& ctx;
     bool isDropped;
     int selectedIndex;
 
     sf::RectangleShape mainBox;
+    sf::RectangleShape arrowBox;
+    sf::ConvexShape arrowTriangle;
     sf::Text mainText;
 
     std::vector<sf::RectangleShape> itemBoxes;
