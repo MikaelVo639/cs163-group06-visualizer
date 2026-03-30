@@ -4,6 +4,7 @@
 #include "Core/AppContext.hpp"
 #include "Core/Constants.hpp"
 
+namespace UI::DSA{
 class Node {
 private:
     AppContext& ctx;
@@ -34,3 +35,4 @@ public:
 
     void draw();
 };
+}

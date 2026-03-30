@@ -1,5 +1,6 @@
 #include "UI/DSA/Node.hpp"
 
+namespace UI::DSA{
 Node::Node(AppContext& context, const std::string& label, sf::Vector2f pos)
     : ctx(context), label(label), text(ctx.font, label, Config::UI::FONT_SIZE_NODE) 
 {
@@ -67,4 +68,5 @@ void Node::onIdle() {
 void Node::draw() {
     ctx.window.draw(shape);
     ctx.window.draw(text);
+}
 }

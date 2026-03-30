@@ -8,7 +8,7 @@ class TestScreen : public Screen {
 private:
     AppContext& ctx;
     Button btnInsert;
-    std::vector<Node> nodes;
+    std::vector<UI::DSA::Node> nodes;
     std::vector<int> drawOrder;
 
     int draggedNodeIndex = -1; 
