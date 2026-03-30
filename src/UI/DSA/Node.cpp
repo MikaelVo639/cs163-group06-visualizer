@@ -27,6 +27,29 @@ void Node::centerText() {
     text.setPosition({pos.x + r, pos.y + r});
 }
 
+sf::Color Node::getFillColor() const {
+    return shape.getFillColor();
+}
+
+sf::Color Node::getOutlineColor() const {
+    return shape.getOutlineColor();
+}
+
+void Node::setScale(float scaleFactor) {
+    shape.setScale(sf::Vector2f(scaleFactor, scaleFactor));
+    text.setScale(sf::Vector2f(scaleFactor, scaleFactor));
+    centerText(); 
+}
+
+float Node::getScale() const {
+    return shape.getScale().x; 
+}
+
+sf::Vector2f Node::getCenter() const {
+    float r = shape.getRadius();
+    return shape.getPosition() + sf::Vector2f(r, r);
+}
+
 // --- Setters ---
 void Node::setPosition(sf::Vector2f pos) { 
     shape.setPosition(pos); 
@@ -43,7 +66,7 @@ void Node::setOutlineColor(sf::Color color) { shape.setOutlineColor(color); }
 // --- Getters ---
 sf::Vector2f Node::getPosition() const { return shape.getPosition(); }
 float Node::getRadius() const { return shape.getRadius(); }
-std::string Node::getLabel() const { return label; }
+const std::string& Node::getLabel() const { return label; }
 
 bool Node::contains(sf::Vector2f point) const {
     float r = shape.getRadius();
