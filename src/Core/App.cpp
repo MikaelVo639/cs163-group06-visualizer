@@ -31,6 +31,7 @@ void App::run(){
             changeScreen(context.nextState);
             context.nextState = ScreenState::None;
         }
+        }
     }
 }
 
