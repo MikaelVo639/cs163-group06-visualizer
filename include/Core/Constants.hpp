@@ -10,7 +10,7 @@ namespace Config {
         
         // Font size
         inline constexpr unsigned int FONT_SIZE_BUTTON = 24;
-        inline constexpr unsigned int FONT_SIZE_NODE   = 20;
+        inline constexpr unsigned int FONT_SIZE_NODE   = 24;
     
         //Button
         inline constexpr float BUTTON_WIDTH         = 400.f;
@@ -19,7 +19,7 @@ namespace Config {
         inline constexpr float BUTTON_CORNER_RADIUS = 12.f;
         
         //Nodes
-        inline constexpr float NODE_RADIUS = 30.f;
+        inline constexpr float NODE_RADIUS = 40.f;
         inline constexpr float NODE_OUTLINE_THICKNESS = 3.f;
         inline constexpr std::size_t NODE_POINT_COUNT = 30;
 
