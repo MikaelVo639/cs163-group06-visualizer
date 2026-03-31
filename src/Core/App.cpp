@@ -9,7 +9,11 @@ App::App(): window(sf::VideoMode({1600, 900}), "Visualizer", sf::Style::Default 
 };
 
 void App::run(){
+    sf::Clock dtClock;
+
     while (window.isOpen()){
+        float dt = dtClock.restart().asSeconds();
+
         while (auto event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
                 window.close();
@@ -19,6 +23,7 @@ void App::run(){
             currentScreen->handleEvent(*event);
         }
 
+        context.animManager.update(dt);
         currentScreen->update();
 
         window.clear(Config::Colors::Background); 
