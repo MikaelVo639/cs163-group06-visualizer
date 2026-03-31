@@ -51,11 +51,30 @@ bool InputBar::isCharacterAllowed(char32_t unicode) const {
             return true;
 
         case InputType::Integer:
-            if (std::isdigit(static_cast<unsigned char>(c))) return true;
-
             if (c == '-') {
-                return content.empty(); // only allow to place "-" at the beginning
+                return content.empty(); // only allow '-' at first place
             }
+
+            if (std::isdigit(static_cast<unsigned char>(c))) {
+                // allow to input 0 if input bar is empty
+                if (content.empty()) {
+                    return true;
+                }
+
+                // allow '0' and '-0'
+                if (content == "-") {
+                    return true;
+                }
+
+                // NOT allow to input if it is '0' or '-0' already
+                // to block 01, 007, -01...
+                if (content == "0" || content == "-0") {
+                    return false;
+                }
+
+                return true;
+            }
+
             return false;
              
 
@@ -187,8 +206,6 @@ void InputBar::updateTextPositions() {
     });
     placeholderText.setPosition({pos.x + paddingX, centerY});
 
-    errorText.setPosition({pos.x, pos.y + size.y + 8.f});
-
     float cursorX;
     
 
@@ -285,9 +302,6 @@ void InputBar::draw(){
         ctx.window.draw(cursor);
     }
 
-    if (!errorMessage.empty()) {
-        ctx.window.draw(errorText);
-    }
 }
 
 
