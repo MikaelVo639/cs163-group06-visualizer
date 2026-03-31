@@ -1,38 +1,56 @@
+// Update sidebar 
+// Now sidebar can validate the data u input from your keyboard
+// 5 types of content:
+// AnyText,
+// Integer,
+// IntegerList,
+// Word,
+// EdgeTriple
+// Change the type u want to test: just look at the arrow below:
+
 #include "States/TestScreen.hpp"
 #include "Core/Constants.hpp"
 
 TestScreen::TestScreen(AppContext& context)
     : ctx(context),
-      inputBar(context, {500.f, 300.f}, {400.f, 70.f}, "Enter something..."),
-      btnSubmit(context, "SUBMIT", {500.f, 400.f}, {200.f, 60.f}),
+      inputBar(context,
+               {500.f, 300.f},
+               {400.f, 70.f},
+               "Enter your data:",
+               UI::Widgets::InputType::Integer),  //  <------------ this is where to change which type of data u input
+      btnSubmit(context,
+                "SUBMIT",
+                {620.f, 400.f},
+                {160.f, 60.f}),
+      title(ctx.font, "INPUT BAR TEST", 36),
       resultText(ctx.font, "", 28)
 {
-    resultText.setFillColor(sf::Color::White);
-    resultText.setPosition({500.f, 500.f});
-}
+    title.setFillColor(sf::Color::White);
+    title.setPosition({560.f, 180.f});
 
-void TestScreen::updateResultText() {
-    resultText.setString("You entered: " + lastInput);
+    resultText.setFillColor(sf::Color::White);
+    resultText.setPosition({500.f, 520.f});
 }
 
 void TestScreen::handleEvent(const sf::Event& event) {
     inputBar.handleEvent(event);
 
-    // Submit bằng button
-    if (btnSubmit.isClicked(event)) {
-        if (!inputBar.empty()) {
-            lastInput = inputBar.getText();
+    if (btnSubmit.isClicked(event) || inputBar.isSubmitted(event)) {
+        if (inputBar.empty()) {
+            resultText.setString("Input is empty");
+        }
+        else if (!inputBar.valid()) {
+            resultText.setString("Error: " + inputBar.getErrorMessage());
+        }
+        else {
+            resultText.setString("Accepted: " + inputBar.getText());
             inputBar.clear();
-            updateResultText();
         }
     }
 
-    // Submit bằng Enter
-    if (inputBar.isSubmitted(event)) {
-        if (!inputBar.empty()) {
-            lastInput = inputBar.getText();
-            inputBar.clear();
-            updateResultText();
+    if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        if (keyPressed->code == sf::Keyboard::Key::Escape) {
+            ctx.nextState = ScreenState::MainMenu;
         }
     }
 }
@@ -45,6 +63,7 @@ void TestScreen::update() {
 }
 
 void TestScreen::draw() {
+    ctx.window.draw(title);
     inputBar.draw();
     btnSubmit.draw();
     ctx.window.draw(resultText);

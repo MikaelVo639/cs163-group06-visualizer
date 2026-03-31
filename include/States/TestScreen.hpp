@@ -1,11 +1,12 @@
 #pragma once
 
-#include "States/Screen.hpp"
+#include <SFML/Graphics.hpp>
+#include <string>
+
 #include "Core/AppContext.hpp"
+#include "States/Screen.hpp"
 #include "UI/Widgets/Button.hpp"
 #include "UI/Widgets/InputBar.hpp"
-
-#include <string>
 
 class TestScreen : public Screen {
 private:
@@ -14,10 +15,8 @@ private:
     UI::Widgets::InputBar inputBar;
     UI::Widgets::Button btnSubmit;
 
+    sf::Text title;
     sf::Text resultText;
-    std::string lastInput;
-
-    void updateResultText();
 
 public:
     explicit TestScreen(AppContext& context);
