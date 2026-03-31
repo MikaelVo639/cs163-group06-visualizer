@@ -50,32 +50,45 @@ bool InputBar::isCharacterAllowed(char32_t unicode) const {
         case InputType::AnyText:
             return true;
 
-        case InputType::Integer:
-            if (c == '-') {
-                return content.empty(); // only allow '-' at first place
-            }
+        case InputType::Integer: {
+        if (c == '-') {
+            return content.empty(); // only allow just one '-' at the first place
+        }
 
-            if (std::isdigit(static_cast<unsigned char>(c))) {
-                // allow to input 0 if input bar is empty
-                if (content.empty()) {
-                    return true;
-                }
-
-                // allow '0' and '-0'
-                if (content == "-") {
-                    return true;
-                }
-
-                // NOT allow to input if it is '0' or '-0' already
-                // to block 01, 007, -01...
-                if (content == "0" || content == "-0") {
-                    return false;
-                }
-
-                return true;
-            }
-
+        if (!std::isdigit(static_cast<unsigned char>(c))) {
             return false;
+        }
+
+        // NO leading zero
+        // bloac "01", "007", "-01",...
+        if (content == "0" || content == "-0") {
+            return false;
+        }
+
+        // new string after input
+        std::string candidate = content + c;
+
+        // Not allow only "-"
+        if (candidate == "-") {
+            return true;
+        }
+
+        try {
+            std::size_t pos = 0;
+            int value = std::stoi(candidate, &pos);
+
+            // parse all the current string
+            if (pos != candidate.size()) {
+                return false;
+            }
+
+            // range is -999 to 999
+            return value >= -999 && value <= 999;
+        }
+        catch (...) {
+            return false;
+        }
+    }
              
 
         case InputType::IntegerList:
