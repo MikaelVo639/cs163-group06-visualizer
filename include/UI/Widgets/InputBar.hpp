@@ -56,7 +56,7 @@ private:
     bool isCharacterAllowed(char32_t unicode) const;
     bool validateContent();
     
-
+    void fitTextToBox(sf::Text& target, float horizontalPadding = 15.f, float verticalPadding = 10.f);
     void updateTextPositions();
 
 public:

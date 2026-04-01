@@ -204,6 +204,8 @@ void InputBar::updateTextPositions() {
 
     float paddingX      = 15.f;
     float centerY       = pos.y + size.y / 2.f;
+    fitTextToBox(text);
+    fitTextToBox(placeholderText);
 
     sf::FloatRect textBounds            = text.getLocalBounds();
     text.setOrigin({
@@ -366,10 +368,32 @@ void InputBar::setType(InputType inputType) {
         case InputType::AnyText:
         case InputType::IntegerList:
         case InputType::EdgeTriple:
-            maxLength = 30;
+            maxLength = 20;
             break;
     }
     validateContent();
+}
+
+void InputBar::fitTextToBox(sf::Text& target, float horizontalPadding, float verticalPadding) {
+    sf::Vector2f size = box.getSize();
+
+    unsigned int maxCharSize = Config::UI::FONT_SIZE_BUTTON;
+    unsigned int minCharSize = 10;
+
+    target.setCharacterSize(maxCharSize);
+
+    while (target.getCharacterSize() > minCharSize) {
+        sf::FloatRect bounds = target.getLocalBounds();
+
+        float maxWidth  = size.x - 2.f * horizontalPadding;
+        float maxHeight = size.y - 2.f * verticalPadding;
+
+        if (bounds.size.x <= maxWidth && bounds.size.y <= maxHeight) {
+            break;
+        }
+
+        target.setCharacterSize(target.getCharacterSize() - 1);
+    }
 }
 
 // getter
