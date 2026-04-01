@@ -14,8 +14,8 @@
 TestScreen::TestScreen(AppContext& context)
     : ctx(context),
       inputBar(context,
-               {500.f, 300.f},
-               {150.f, 70.f},
+               {150.f, 300.f},    //<----- 150.f is the minimum width, you can increase if u want
+               {300.f, 70.f},
                "Enter your data:",
                UI::Widgets::InputType::AnyText),  //  <------------ this is where to change which type of data u input
       btnSubmit(context,
