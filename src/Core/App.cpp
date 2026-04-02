@@ -1,12 +1,12 @@
 #include "Core/App.hpp"
-#include "States/TestScreen.hpp"
+
 
 App::App(): window(sf::VideoMode({1600, 900}), "Visualizer", sf::Style::Default ^ sf::Style::Resize),
             font("assets/fonts/SpaceMono.ttf"),
             context{window, font, ScreenState::None} 
 {
     window.setFramerateLimit(60);
-    currentScreen = std::make_unique<TestScreen>(context);
+    currentScreen = std::make_unique<MenuScreen>(context);
 };
 
 void App::run(){
