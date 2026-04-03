@@ -8,6 +8,7 @@
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <UI/Widgets/Dropdown.hpp>
 #include <vector>
+#include <memory>
 
 // Enum for State Management
 enum class ActiveMenu {
@@ -22,24 +23,11 @@ private:
     sf::Text title;
     UI::Widgets::Button btnBack;
 
-    // Main Left Column Menu
-    UI::Widgets::Button btnCreate;
-    UI::Widgets::Button btnInsert;
-    UI::Widgets::Button btnRemove;
-    UI::Widgets::Button btnSearch;
-    UI::Widgets::Button btnClean;
-
     // Right Panel
     RoundedRectangleShape panelBg;
-    sf::Text lblParam1;
-    sf::Text lblParam2;
 
-    UI::Widgets::InputBar inputParam1;
-    UI::Widgets::InputBar inputParam2;
-
-    // Contextual execution buttons
-    UI::Widgets::Dropdown dropdownAction;
-    UI::Widgets::Button btnExecute;
+    // Contextual execution
+    std::unique_ptr<UI::Widgets::Dropdown> dropdownAction;
     int lastDropdownIndex = -1;
 
     // Timeline Controls
@@ -50,11 +38,10 @@ private:
     // State
     ActiveMenu activeMenu = ActiveMenu::None;
 
-    // Active Widgets for Generic Update/Draw
-    std::vector<UI::Widgets::Button*> mainButtons;
-    std::vector<UI::Widgets::Button*> activeSubButtons;
-    std::vector<UI::Widgets::InputBar*> activeInputs;
-    std::vector<sf::Text*> activeLabels;
+    // Active Widgets managed by unique_ptr
+    std::vector<std::unique_ptr<UI::Widgets::Button>> mainButtons;
+    std::vector<std::unique_ptr<UI::Widgets::Button>> activeSubButtons;
+    std::vector<std::unique_ptr<UI::Widgets::InputBar>> activeInputs;
 
     void initUI();
     void updateLayout();
