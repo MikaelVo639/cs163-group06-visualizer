@@ -34,13 +34,7 @@ void TestScreen::addNewNode(const std::string &val){
 
     // Connect all existing nodes to the newest one using their index
     for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(nodes[i].get(), nodes[newNodeIndex].get(), ctx); 
-        
-        sf::Color randomColor(std::rand() % 256, std::rand() % 256, std::rand() % 256);
-        edges.back().setColor(randomColor);
-        edges.back().toggleDirection(1);
-        edges.back().flipDirection();
-        edges.back().setThickness(3);
+        edges.emplace_back(nodes[i].get(), nodes[newNodeIndex].get(), ctx, "5.2", 1, 5, sf::Color::Green); 
     }
     
     drawOrder.push_back(newNodeIndex);
@@ -116,7 +110,7 @@ void TestScreen::update() {
 void TestScreen::draw() {
     // 4. Draw order: Edges FIRST (so they appear under nodes)
     for (auto& edge : edges) {
-        edge.draw(ctx.window);
+        edge.draw();
     }
 
     // Then draw nodes

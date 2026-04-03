@@ -8,18 +8,29 @@ namespace UI::DSA {
 
 class Edge {
 public:
-    Edge(Node* src, Node* dest, AppContext& context, float weight = 1.0f, float thickness = 2.0f);
+    // 1. The Simplest: Just a basic connection
+    Edge(Node* src, Node* dest, AppContext& context);
+
+    // 2. Connection with Weight
+    Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr);
+
+    // 3. Connection with Weight and Directionality
+    Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr, bool directed);
+
+    // 4. The "Master": Everything included
+    Edge(Node* src, Node* dest, AppContext& context, 
+         const std::string& weightStr, bool directed, float thickness, sf::Color color);
 
     void update();
 
-    void draw(sf::RenderTarget& target);
+    void draw();
 
     // Setters for visual states (useful for DSA animations)
     void setColor(sf::Color color);
     void setThickness(float newThickness);
 
-    void setWeight(float newWeight);
-    float getWeight() const;
+    void setWeight(std::string newWeight);
+    std::string getWeight() const;
 
     void toggleDirection(bool directed);
     void flipDirection();
@@ -29,7 +40,7 @@ private:
     Node* source;
     Node* dest;
 
-    float weight;
+    std::string weight;
     sf::Text weightText;
 
     sf::ConvexShape lineShape;
@@ -40,4 +51,5 @@ private:
     bool isDirected; // You can toggle this in the constructor
 };
 
-} // namespace UI::DSA
+} 
+// namespace UI::DSA

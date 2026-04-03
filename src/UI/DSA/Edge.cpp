@@ -3,21 +3,38 @@
 
 namespace UI::DSA {
 
-Edge::Edge(Node* src, Node* dest, AppContext& context, float weight, float thickness)
-    : source(src), dest(dest), ctx(context), weight(weight), thickness(thickness), weightText(ctx.font) 
+// 1. The Simplest calls the Master with defaults
+Edge::Edge(Node* src, Node* dest, AppContext& context)
+    : Edge(src, dest, context, "", false, 2.0f, sf::Color(150, 150, 150)) {}
+
+// 2. The Weight one calls the Master
+Edge::Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr)
+    : Edge(src, dest, context, weightStr, false, 2.0f, sf::Color(150, 150, 150)) {}
+
+// 3. The Directed one calls the Master
+Edge::Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr, bool directed)
+    : Edge(src, dest, context, weightStr, directed, 2.0f, sf::Color(150, 150, 150)) {}
+
+// 4. THE MASTER CONSTRUCTOR
+Edge::Edge(Node* src, Node* dest, AppContext& context, 
+           const std::string& weightStr, bool directed, float thickness, sf::Color color)
+    : source(src), dest(dest), ctx(context), weight(weightStr), 
+      isDirected(directed), thickness(thickness), color(color), weightText(ctx.font) 
 {
-    color = sf::Color(150, 150, 150); // Default grey
-    isDirected = 0;
-    // Initialize Weight Text
-    weightText.setCharacterSize(Config::UI::FONT_SIZE_NODE * 0.8f); // Slightly smaller than node text
+    // Initialize visuals
+    lineShape.setFillColor(color);
+    arrowhead.setFillColor(color);
+    
+    // Setup weight text
+    weightText.setCharacterSize(Config::UI::FONT_SIZE_NODE * 0.8f);
     weightText.setFillColor(sf::Color::White);
-    setWeight(weight); // Set initial string
+    setWeight(weightStr); 
 }
 
-void Edge::setWeight(float newWeight) {
+void Edge::setWeight(std::string newWeight) {
     weight = newWeight;
     // Use std::to_string or a precision formatter
-    weightText.setString(std::to_string(static_cast<int>(weight)));
+    weightText.setString(weight);
     
     // Center the text origin so it stays balanced on the line
     sf::FloatRect bounds = weightText.getLocalBounds();
@@ -95,12 +112,12 @@ void Edge::update() {
     }
 }
 
-void Edge::draw(sf::RenderTarget& target) {
-    target.draw(lineShape);
+void Edge::draw() {
+    ctx.window.draw(lineShape);
     if (isDirected) {
-        target.draw(arrowhead);
+        ctx.window.draw(arrowhead);
     }
-    target.draw(weightText);
+    ctx.window.draw(weightText);
 }
 
 void Edge::setColor(sf::Color newColor) {
@@ -124,7 +141,7 @@ void Edge::flipDirection(){
     std::swap(source, dest);
 }
 
-float Edge::getWeight() const{
+std::string Edge::getWeight() const{
     return weight;
 }
 } // namespace UI::DSA
