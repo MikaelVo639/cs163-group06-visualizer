@@ -1,9 +1,9 @@
-#include "UI/Animations/ScaleAnimation.hpp"
+#include "UI/Animations/Node/NodeScaleAnimation.hpp"
 #include <algorithm> 
 
 namespace UI::Animations {
 
-    ScaleAnimation::ScaleAnimation(UI::DSA::Node* node, float start, float end, float duration)
+    NodeScaleAnimation::NodeScaleAnimation(UI::DSA::Node* node, float start, float end, float duration)
             : targetNode(node), startScale(start), endScale(end), 
               totalDuration(duration), elapsedTime(0.f) 
     {
@@ -12,7 +12,7 @@ namespace UI::Animations {
         }
     }
 
-    void ScaleAnimation::update(float dt) {
+    void NodeScaleAnimation::update(float dt) {
         if (!targetNode || isFinished()) return;
 
         elapsedTime += dt;
@@ -25,7 +25,7 @@ namespace UI::Animations {
         targetNode->setScale(currentScale);
     }
 
-    bool ScaleAnimation::isFinished() const{
+    bool NodeScaleAnimation::isFinished() const{
         return elapsedTime >= totalDuration;
     }
 }

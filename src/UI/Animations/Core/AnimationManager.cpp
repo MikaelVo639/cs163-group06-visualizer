@@ -1,4 +1,4 @@
-#include "UI/Animations/AnimationManager.hpp"
+#include "UI/Animations/Core/AnimationManager.hpp"
 
 namespace UI::Animations {
 

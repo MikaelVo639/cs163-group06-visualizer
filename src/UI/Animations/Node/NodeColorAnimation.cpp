@@ -1,10 +1,10 @@
-#include "UI/Animations/ColorAnimation.hpp"
+#include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include <algorithm>
 #include <cstdint>
 
 namespace UI::Animations {
 
-    ColorAnimation::ColorAnimation(UI::DSA::Node* node, 
+    NodeColorAnimation::NodeColorAnimation(UI::DSA::Node* node, 
                                    sf::Color startF, sf::Color endF,
                                    sf::Color startT, sf::Color endT, 
                                    float duration)
@@ -19,7 +19,7 @@ namespace UI::Animations {
         }
     }
 
-    sf::Color ColorAnimation::lerpColor(sf::Color start, sf::Color end, float t) {
+    sf::Color NodeColorAnimation::lerpColor(sf::Color start, sf::Color end, float t) {
         std::uint8_t r = static_cast<std::uint8_t>(start.r + t * (end.r - start.r));
         std::uint8_t g = static_cast<std::uint8_t>(start.g + t * (end.g - start.g));
         std::uint8_t b = static_cast<std::uint8_t>(start.b + t * (end.b - start.b));
@@ -27,7 +27,7 @@ namespace UI::Animations {
         return sf::Color(r, g, b, a);
     }
 
-    void ColorAnimation::update(float dt) {
+    void NodeColorAnimation::update(float dt) {
         if (!targetNode || isFinished()) return;
 
         elapsedTime += dt;
@@ -37,7 +37,7 @@ namespace UI::Animations {
         targetNode->setLabelColor(lerpColor(startText, endText, t));
     }
 
-    bool ColorAnimation::isFinished() const {
+    bool NodeColorAnimation::isFinished() const {
         return elapsedTime >= totalDuration;
     }
 

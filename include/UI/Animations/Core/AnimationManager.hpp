@@ -1,5 +1,5 @@
 #pragma once
-#include "AnimationBase.hpp"
+#include "UI/Animations/Core/AnimationBase.hpp"
 #include <vector>
 #include <memory>
 

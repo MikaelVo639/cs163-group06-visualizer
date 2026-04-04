@@ -1,10 +1,10 @@
 #pragma once
-#include "UI/Animations/AnimationBase.hpp"
+#include "UI/Animations/Core/AnimationBase.hpp"
 #include "UI/DSA/Node.hpp"
 
 namespace UI::Animations {
 
-    class MoveAnimation : public AnimationBase {
+    class NodeMoveAnimation : public AnimationBase {
     private:
         UI::DSA::Node* targetNode;
         sf::Vector2f startPos;
@@ -13,7 +13,7 @@ namespace UI::Animations {
         float elapsedTime;
 
     public:
-        MoveAnimation(UI::DSA::Node* node, sf::Vector2f end, float duration);
+        NodeMoveAnimation(UI::DSA::Node* node, sf::Vector2f end, float duration);
         void update(float dt) override;
         bool isFinished() const override;
     };

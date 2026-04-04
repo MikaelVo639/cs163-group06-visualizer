@@ -1,10 +1,10 @@
-#include "UI/Animations/SwapAnimation.hpp"
+#include "UI/Animations/Node/NodeSwapAnimation.hpp"
 #include <algorithm>
 #include <cmath> 
 
 namespace UI::Animations{
 
-    SwapAnimation::SwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration)
+    NodeSwapAnimation::NodeSwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration)
             : nodeA(a), nodeB(b), totalDuration(duration), elapsedTime(0.f) 
     {
         if (nodeA && nodeB) {
@@ -13,7 +13,7 @@ namespace UI::Animations{
         }
     }
 
-    void SwapAnimation::update(float dt) {
+    void NodeSwapAnimation::update(float dt) {
             if (!nodeA || !nodeB || isFinished()) return;
 
             elapsedTime += dt;
@@ -42,7 +42,7 @@ namespace UI::Animations{
             }
         }
 
-    bool SwapAnimation::isFinished() const {
+    bool NodeSwapAnimation::isFinished() const {
             return elapsedTime >= totalDuration;
         }
 }

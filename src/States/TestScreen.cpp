@@ -1,12 +1,8 @@
 #include "States/TestScreen.hpp"
 #include "Core/Constants.hpp"
-#include "UI/Animations/ScaleAnimation.hpp"
-#include "UI/Animations/InsertAnimation.hpp"
-#include "UI/Animations/DeleteAnimation.hpp"
-#include "UI/Animations/SwapAnimation.hpp"
-#include "UI/Animations/ColorAnimation.hpp"
-#include "UI/Animations/HighlightAnimation.hpp"
-#include "UI/Animations/UnhighlightAnimation.hpp"
+#include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "UI/Animations/Node/NodeSwapAnimation.hpp"
+#include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include <iostream>
 #include <cstdlib> 
 #include <ctime>   
@@ -39,7 +35,7 @@ void TestScreen::addNewNode(const std::string &val){
 
     UI::DSA::Node* newNodePtr = nodes.back().get();
     ctx.animManager.addAnimation(
-        std::make_unique<UI::Animations::InsertAnimation>(newNodePtr, 0.3f)
+        std::make_unique<UI::Animations::NodeInsertAnimation>(newNodePtr, 0.3f)
     );
 
     size_t newNodeIndex = nodes.size() - 1;
@@ -74,7 +70,7 @@ void TestScreen::handleEvent(const sf::Event& event) {
             if (ctx.animManager.empty()){
                 if (nodes.size() >= 2) {
                     ctx.animManager.addAnimation(
-                        std::make_unique<UI::Animations::SwapAnimation>(
+                        std::make_unique<UI::Animations::NodeSwapAnimation>(
                             nodes[0].get(), nodes[1].get(), 0.3f
                         )
                     );
@@ -90,7 +86,7 @@ void TestScreen::handleEvent(const sf::Event& event) {
             if (!nodes.empty()) {
                 UI::DSA::Node* nodeToDeletePtr = nodes.back().get();
                 ctx.animManager.addAnimation(
-                    std::make_unique<UI::Animations::DeleteAnimation>(
+                    std::make_unique<UI::Animations::NodeDeleteAnimation>(
                         nodeToDeletePtr, 0.3f, 
                         [this]() { 
                             if (!nodes.empty()) {
@@ -106,7 +102,7 @@ void TestScreen::handleEvent(const sf::Event& event) {
         if (keyPressed->code == sf::Keyboard::Key::H) {
             if (!nodes.empty()) {
                 ctx.animManager.addAnimation(
-                    std::make_unique<UI::Animations::HighlightAnimation>(
+                    std::make_unique<UI::Animations::NodeHighlightAnimation>(
                         nodes[0].get(), .3f
                     )
                 );
@@ -118,7 +114,7 @@ void TestScreen::handleEvent(const sf::Event& event) {
         if (keyPressed->code == sf::Keyboard::Key::U) {
             if (!nodes.empty()) {
                 ctx.animManager.addAnimation(
-                    std::make_unique<UI::Animations::UnhighlightAnimation>(
+                    std::make_unique<UI::Animations::NodeUnhighlightAnimation>(
                         nodes[0].get(), .3f
                     )
                 );

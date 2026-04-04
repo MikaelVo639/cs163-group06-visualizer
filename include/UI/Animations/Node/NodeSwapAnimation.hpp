@@ -1,11 +1,11 @@
 #pragma once
-#include "UI/Animations/AnimationBase.hpp"
+#include "UI/Animations/Core/AnimationBase.hpp"
 #include "UI/DSA/Node.hpp"
 
 namespace UI::Animations {
 
     //Move the Nodes in circle shape
-    class SwapAnimation : public AnimationBase {
+    class NodeSwapAnimation : public AnimationBase {
     private:
         UI::DSA::Node* nodeA;
         UI::DSA::Node* nodeB;
@@ -19,7 +19,7 @@ namespace UI::Animations {
         const float PI = 3.14159265f; 
 
     public:
-        SwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
+        NodeSwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
         void update(float dt) override;
         bool isFinished() const override;
     };
