@@ -73,8 +73,8 @@ void LinkedListScreen::renderSubMenu(float boxY, ActiveMenu type) {
         return dropdownAction->getSelectedIndex();
     };
 
-    auto createInput = [&](const std::string& placeholder, float x, float w) {
-        auto input = std::make_unique<UI::Widgets::InputBar>(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f}, "", UI::Widgets::InputType::Integer);
+    auto createInput = [&](const std::string& placeholder, float x, float w,  UI::Widgets::InputType inputType = UI::Widgets::InputType::Integer) {
+        auto input = std::make_unique<UI::Widgets::InputBar>(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f}, "", inputType);
         input->setPlaceholder(placeholder);
         activeInputs.push_back(std::move(input));
     };
@@ -95,6 +95,9 @@ void LinkedListScreen::renderSubMenu(float boxY, ActiveMenu type) {
         if (sel == 0) { // Random
             createInput("Size", currentX, 110.f);
             currentX += 110.f + gap;
+        }else if (sel == 1) { // File
+            createInput("File path", currentX, 480.f, UI::Widgets::InputType::AnyText);
+            currentX += 480.f + gap;
         }
         createExecuteBtn(currentX);
         currentX += 80.f;
@@ -216,7 +219,12 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
         if (activeMenu == ActiveMenu::Create) {
              int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
              if (sel == 0) std::cout << "[UI LOG] Create Random | Size = " << (!activeInputs.empty() ? activeInputs[0]->getText() : "") << std::endl;
-             else if (sel == 1) std::cout << "[UI LOG] Create File" << std::endl;
+                else if (sel == 1) {
+                    std::cout << "[UI LOG] Create File | Path = "
+                    << (!activeInputs.empty() ? activeInputs[0]->getText() : "")
+                    << std::endl;
+                    //std::string path = !activeInputs.empty() ? activeInputs[0]->getText() : ""; // use to read file
+                }
         }
         else if (activeMenu == ActiveMenu::Insert) {
              int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
