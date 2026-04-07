@@ -3,51 +3,21 @@
 #include <SFML/Graphics.hpp>
 #include <Core/AppContext.hpp>
 #include <States/Screen.hpp>
-#include <UI/Widgets/Button.hpp>
-#include <UI/Widgets/InputBar.hpp>
-#include <UI/Shapes/RoundedRectangleShape.hpp>
-#include <UI/Widgets/Dropdown.hpp>
-#include <UI/Widgets/Slider.hpp>
+#include <UI/Widgets/LinkedListMenu.hpp>
+#include <UI/DSA/Graph.hpp>
 #include <vector>
-#include <optional>
-#include <memory>
-
-// Enum for State Management
-enum class ActiveMenu {
-    None, Create, Insert, Remove, Search, Update, SetRadius, Clean
-};
+#include <string>
 
 class LinkedListScreen : public Screen {
 private:
     AppContext& ctx;
 
-    // Header 
-    sf::Text title;
-    UI::Widgets::Button btnBack;
+    // View components
+    UI::Widgets::LinkedListMenu uiMenu;
+    UI::DSA::Graph myGraph;
 
-    // Right Panel
-    RoundedRectangleShape panelBg;
-
-    // Contextual execution
-    std::optional<UI::Widgets::Dropdown> dropdownAction;
-    int lastDropdownIndex = -1;
-
-    // Timeline Controls
-    UI::Widgets::Button btnPrev;
-    UI::Widgets::Button btnPlay;
-    UI::Widgets::Button btnNext;
-
-    // State
-    ActiveMenu activeMenu = ActiveMenu::None;
-
-    // Active Widgets managed by unique_ptr
-    std::vector<UI::Widgets::Button> mainButtons;
-    std::vector<UI::Widgets::Button> activeSubButtons;
-    std::vector<UI::Widgets::InputBar> activeInputs;
-
-    void initUI();
-    void updateLayout();
-    void renderSubMenu(float boxX, float boxY, ActiveMenu type);
+    // Helper for handling specialized logic (logging for now)
+    void handleMenuAction();
 
 public:
     explicit LinkedListScreen(AppContext& context);
