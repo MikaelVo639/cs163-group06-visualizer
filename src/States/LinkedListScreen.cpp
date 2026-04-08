@@ -19,9 +19,14 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
     }
 
     if (uiMenu.consumeGoClicked()) {
+        UI::Widgets::ActiveMenu current = uiMenu.getActiveMenu();
         handleMenuAction();
         uiMenu.clearInputs();
-        uiMenu.resetMenu();
+        
+        // Only reset (auto-close) for one-shot trigger actions like Clear All
+        if (current == UI::Widgets::ActiveMenu::Clean) {
+            uiMenu.resetMenu();
+        }
     }
 
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
