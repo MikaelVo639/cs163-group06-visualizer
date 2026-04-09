@@ -8,9 +8,8 @@
 
 
 LinkedListScreen::LinkedListScreen(AppContext& context)
-    : ctx(context), 
+    : DSAScreenBase(context), // parent constructor
       uiMenu(context),
-      myGraph(context, true),
       controller(context, myGraph, model)
 {
     myGraph.setDraggable(false);
@@ -18,10 +17,8 @@ LinkedListScreen::LinkedListScreen(AppContext& context)
 
 void LinkedListScreen::handleEvent(const sf::Event& event) {
     uiMenu.handleEvent(event);
+    DSAScreenBase::handleEvent(event);
     
-    sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    myGraph.handleEvent(event, static_cast<sf::Vector2f>(mousePos));
-
     if (uiMenu.isBackClicked(event)) {
         ctx.nextState = ScreenState::MainMenu;
     }
@@ -57,10 +54,7 @@ void LinkedListScreen::handleMenuAction() {
         if (sel == 0) { // Random
             std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
             if (sizeStr.empty()) return;
-            
             int size = std::stoi(sizeStr);
-            if (size > 15) size = 15; 
-            
             controller.handleCreateRandom(size);
         } else if (sel == 1) { // File
             std::cout << "[TODO] Not yet.\n";
@@ -108,10 +102,10 @@ void LinkedListScreen::handleMenuAction() {
 void LinkedListScreen::update() {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
     uiMenu.update(mousePos);
-    myGraph.update();
+    DSAScreenBase::update();
 }
 
 void LinkedListScreen::draw() {
-    myGraph.draw();
-    uiMenu.draw(ctx.window);
+    DSAScreenBase::draw(); // set camera & draw the graph
+    uiMenu.draw(ctx.window); // UI
 }

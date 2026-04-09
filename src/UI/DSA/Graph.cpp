@@ -159,18 +159,15 @@ namespace UI::DSA {
         }
     }
 
-    void Graph::update() {
-        sf::Vector2i mousePosi = sf::Mouse::getPosition(ctx.window);
-        sf::Vector2f mousePos = static_cast<sf::Vector2f>(mousePosi);
-
+    void Graph::update(sf::Vector2f mouseWorldPos) {
         if (draggedNode != nullptr && isDraggable) {
-            draggedNode->setPosition(mousePos + dragOffset);
+            draggedNode->setPosition(mouseWorldPos + dragOffset);
             draggedNode->onHover(); 
         } else {
             Node* hoveredNode = nullptr;
             for (int i = drawOrder.size() - 1; i >= 0; --i) {
                 auto node = drawOrder[i];
-                if (node->contains(mousePos)) {
+                if (node->contains(mouseWorldPos)) {
                     hoveredNode = node; 
                     break; 
                 }

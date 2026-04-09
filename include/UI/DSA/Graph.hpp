@@ -42,7 +42,7 @@ namespace UI::DSA {
         void clearEdges(); 
 
         void handleEvent(const sf::Event& event, sf::Vector2f mousePos);
-        void update();
+        void update(sf::Vector2f mouseWorldPos);
         void draw();
 
         const std::vector<std::unique_ptr<Node>>& getNodes() const;
