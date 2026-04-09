@@ -43,13 +43,16 @@ namespace UI::DSA {
     void Graph::removeNodeAt(int index) {
         if (index < 0 || index >= nodes.size()) return;
 
-        Node* nodeToDelete = nodes[index].get();
+        std::unique_ptr<Node> dyingNodePtr = std::move(nodes[index]);
+        Node* nodeToDelete = dyingNodePtr.get();
+        
+        nodes.erase(nodes.begin() + index); 
+        dyingNodes.push_back(std::move(dyingNodePtr)); 
 
-        // Dùng Animation thu nhỏ trước khi thực sự xoá data
         ctx.animManager.addAnimation(
             std::make_unique<UI::Animations::NodeDeleteAnimation>(
                 nodeToDelete, 0.2f, 
-                [this, nodeToDelete, index]() { 
+                [this, nodeToDelete]() { 
                     edges.erase(
                         std::remove_if(edges.begin(), edges.end(),
                             [nodeToDelete](const std::unique_ptr<Edge>& edge) {
@@ -61,10 +64,10 @@ namespace UI::DSA {
                     auto it = std::find(drawOrder.begin(), drawOrder.end(), nodeToDelete);
                     if (it != drawOrder.end()) drawOrder.erase(it);
 
-                    auto nodeIt = std::find_if(nodes.begin(), nodes.end(), 
+                    auto dyingIt = std::find_if(dyingNodes.begin(), dyingNodes.end(), 
                         [nodeToDelete](const std::unique_ptr<Node>& n) { return n.get() == nodeToDelete; });
                     
-                    if (nodeIt != nodes.end()) nodes.erase(nodeIt);
+                    if (dyingIt != dyingNodes.end()) dyingNodes.erase(dyingIt);
                 }
             )
         );
