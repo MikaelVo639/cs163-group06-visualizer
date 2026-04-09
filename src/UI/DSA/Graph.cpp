@@ -219,4 +219,29 @@ namespace UI::DSA {
         }
         return nullptr;
     }
+
+    sf::FloatRect Graph::getGraphBounds() const {
+        if (nodes.empty()) {
+            return sf::FloatRect({0.f, 0.f}, {1000.f, 1000.f}); 
+        }
+
+        float minX = nodes[0]->getPosition().x;
+        float maxX = minX;
+        float minY = nodes[0]->getPosition().y;
+        float maxY = minY;
+
+        for (const auto& node : nodes) {
+            sf::Vector2f pos = node->getPosition();
+            minX = std::min(minX, pos.x);
+            maxX = std::max(maxX, pos.x);
+            minY = std::min(minY, pos.y);
+            maxY = std::max(maxY, pos.y);
+        }
+
+        return sf::FloatRect({minX, minY}, {maxX - minX, maxY - minY});
+    }
+
+    bool Graph::getIsDirected() const  { return isDirected; }
+
+    
 } // namespace UI::DSA

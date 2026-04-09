@@ -51,8 +51,9 @@ namespace UI::DSA {
         Node* getNode(int index) const; 
         Edge* getEdge(int srcIndex, int destIndex) const; 
         bool isAnimating() const;
+        sf::FloatRect getGraphBounds() const;
         
-        bool getIsDirected() const { return isDirected; }
+        bool getIsDirected() const;
     };
 
 } // namespace UI::DSA

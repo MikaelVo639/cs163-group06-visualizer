@@ -1,4 +1,5 @@
 #include "States/DSAScreenBase.hpp"
+#include <algorithm>
 
 DSAScreenBase::DSAScreenBase(AppContext& context) 
     : ctx(context), myGraph(context, true) 
@@ -31,10 +32,25 @@ void DSAScreenBase::handleEvent(const sf::Event& event) {
                                     ctx.window.mapPixelToCoords(currentMousePos, graphView);
             
             graphView.move(delta);
+
+            sf::FloatRect bounds = myGraph.getGraphBounds();
+            float padding = 1000.f; 
+
+            sf::Vector2f center = graphView.getCenter();
+            
+            center.x = std::clamp(center.x, 
+                                    bounds.position.x - padding, 
+                                    bounds.position.x + bounds.size.x + padding);
+                                    
+            center.y = std::clamp(center.y, 
+                                    bounds.position.y - padding, 
+                                    bounds.position.y + bounds.size.y + padding);
+            
+            graphView.setCenter(center);
+
             lastPanMousePos = currentMousePos;
         }
     }
-    
     else if (const auto* wheelScrolled = event.getIf<sf::Event::MouseWheelScrolled>()) {
         if (wheelScrolled->wheel == sf::Mouse::Wheel::Vertical) {
             float zoomAmount = 1.1f;
@@ -43,6 +59,11 @@ void DSAScreenBase::handleEvent(const sf::Event& event) {
             } else if (wheelScrolled->delta < 0) {
                 graphView.zoom(zoomAmount);        
             }
+        }
+    }
+    else if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        if (keyPressed->code == sf::Keyboard::Key::Space) {
+            graphView = ctx.window.getDefaultView();
         }
     }
 }
