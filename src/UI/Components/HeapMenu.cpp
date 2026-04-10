@@ -18,12 +18,29 @@ void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     float boxHeight = 80.f;
     float boxWidth = 0.f;
 
-    sf::Color innerBtnIdle  = Config::UI::Colors::ButtonIdle;
+    sf::Color innerBtnIdle = Config::UI::Colors::ButtonIdle;
     sf::Color innerBtnHover = Config::UI::Colors::ButtonHover;
     sf::Color innerBtnPress = Config::UI::Colors::ButtonPressed;
+    sf::Color dropdownHover = Config::UI::Colors::ButtonHover;
+    sf::Color dropdownPress = Config::UI::Colors::ButtonPressed;
 
-    auto createInput = [&](const std::string& placeholder, float x, float w,
-                           InputType inputType = InputType::AnyText) {
+    auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
+        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
+        dropdownAction->setColors(innerBtnIdle, dropdownHover, dropdownPress, sf::Color::White);
+        dropdownAction->setOptions(options);
+        
+        if (lastDropdownIndex >= 0 && lastDropdownIndex < static_cast<int>(options.size())) {
+            dropdownAction->setSelectedIndex(lastDropdownIndex);
+        } else {
+            dropdownAction->setSelectedIndex(0);
+            lastDropdownIndex = 0;
+        }
+
+        dropdownAction->setLabel(dropdownAction->getSelectedText());
+        return dropdownAction->getSelectedIndex();
+    };
+
+    auto createInput = [&](const std::string& placeholder, float x, float w, InputType inputType = InputType::AnyText) {
         activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f}, "", inputType);
         activeInputs.back().setPlaceholder(placeholder);
     };
@@ -37,34 +54,53 @@ void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     float gap = 15.f;
 
     if (type == ActiveMenu::Create) {
-        createInput("Size", currentX, 120.f, InputType::Integer);
-        currentX += 120.f + gap;
-        createExecuteBtn(currentX);
-        currentX += 90.f;
+        int sel = createDropdown({"Random", "File"}, currentX, 160.f);
+        currentX += 160.f + gap;
+
+        if (sel == 0) { // Random
+            createInput("Size", currentX, 120.f, InputType::Integer);
+            currentX += 120.f + gap;
+            createExecuteBtn(currentX);
+            currentX += 90.f;
+        } 
+        else if (sel == 1) { // File
+            activeSubButtons.emplace_back(ctx, "Edit", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
+            activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+            currentX += 90.f + gap;
+            
+            activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
+            activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+            currentX += 90.f;
+        }
     }
     else if (type == ActiveMenu::Insert) {
         createInput("Value", currentX, 140.f, InputType::Integer);
         currentX += 140.f + gap;
+
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
     else if (type == ActiveMenu::Remove) {
         createInput("Value", currentX, 140.f, InputType::Integer);
         currentX += 140.f + gap;
+
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
     else if (type == ActiveMenu::Search) {
-        createInput("Value", currentX, 140.f, InputType::Integer);
-        currentX += 140.f + gap;
+        createInput("Value", currentX, 160.f, InputType::Integer);
+        currentX += 160.f + gap;
+
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
     else if (type == ActiveMenu::Update) {
         createInput("Old Val", currentX, 150.f, InputType::Integer);
         currentX += 150.f + gap;
+
         createInput("New Val", currentX, 150.f, InputType::Integer);
         currentX += 150.f + gap;
+
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
@@ -81,4 +117,4 @@ void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     }
 }
 
-} // namespace UI::Widgets
+}

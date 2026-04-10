@@ -1,11 +1,14 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-
-#include "Core/AppContext.hpp"
-// #include "Core/DSA/Heap.hpp"
-#include "States/DSAScreenBase.hpp"
-#include "UI/Components/HeapMenu.hpp"
+#include <Core/AppContext.hpp>
+#include <Core/DSA/Heap.hpp>
+#include <States/Screen.hpp>
+#include <States/DSAScreenBase.hpp>
+#include <UI/Components/HeapMenu.hpp>
+#include <UI/DSA/Graph.hpp>
+#include <vector>
+#include <string>
 #include "Controllers/HeapController.hpp"
 
 class HeapScreen : public DSAScreenBase {
