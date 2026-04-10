@@ -58,27 +58,24 @@ namespace Controllers {
             if (outFile.is_open()) {
                 outFile << "# --- LINKED LIST VISUALIZER DATA ---\n"
                         << "# DETAILED INSTRUCTIONS:\n"
-                        << "# 1. Type your integer values directly below this line.\n"
-                        << "#    (Maximum recommended size is 15 nodes and each value must be 3 digits for best visual experience).\n"
-                        << "# 2. You can put all numbers on one line separated by spaces:\n"
-                        << "#    Example: 10 20 30 40 50\n"
-                        << "# 3. Or, you can put each number on a new line (hit Enter).\n"
-                        << "# 4. Do NOT use commas (,) or other punctuation marks.\n"
-                        << "# 5. When you are done:\n"
+                        << "# 1. Type the number of elements 'n' first.\n"
+                        << "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
+                        << "#    (Max n is 15. Values must be between -999 and 999).\n"
+                        << "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                        << "# 4. When you are done:\n"
                         << "#    - Save this file by pressing Ctrl + S\n"
                         << "#    - Go back to the Application and click the 'Go' button.\n"
                         << "# -----------------------------------\n";
                 outFile.close();
             }
-            std::cout << "[UI LOG] File chưa tồn tại. Đã tự động sinh file trống và mở Notepad để bạn nhập liệu.\n";
+            std::cout << "[UI LOG] File not found. Created an empty file and opened Notepad for data entry.\n";
             std::system(("start notepad " + filePath).c_str());
             return;
         }
 
         // Smart Parser
         std::string line;
-        std::vector<int> parsedData;
-        const int MAX_NODES = 15; 
+        std::vector<int> allNumbers;
 
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
@@ -91,18 +88,73 @@ namespace Controllers {
             while (ss >> token) {
                 try {
                     int val = std::stoi(token);
-                    parsedData.push_back(val);
-                    if (parsedData.size() >= MAX_NODES) break;
+                    allNumbers.push_back(val);
                 } catch (...) {
                     // Ignore valid text
                 }
             }
-            if (parsedData.size() >= MAX_NODES) break;
         }
         file.close();
 
-        if (parsedData.empty()) {
-            std::cout << "[UI LOG] Không đọc được dữ liệu nào hợp lệ. Vui lòng nhập số vào file.\n";
+        std::string errorMsg = "";
+        int n = -1;
+        std::vector<int> parsedData;
+
+        if (allNumbers.empty()) {
+            errorMsg = "# [WARNING] Could not read 'n'. Please enter the number of elements first.\n";
+        } else {
+            n = allNumbers[0];
+            if (n < 0) {
+                errorMsg = "# [WARNING] Invalid size 'n' = " + std::to_string(n) + " (must be >= 0).\n";
+            } else if (n > 15) {
+                errorMsg = "# [WARNING] Size 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 15.\n";
+            } else if (allNumbers.size() - 1 < static_cast<size_t>(n)) {
+                errorMsg = "# [WARNING] Expected " + std::to_string(n) + " elements, but found only " + std::to_string(allNumbers.size() - 1) + ".\n";
+            } else {
+                for (int i = 1; i <= n; ++i) {
+                    if (allNumbers[i] < -999 || allNumbers[i] > 999) {
+                        errorMsg = "# [WARNING] Value " + std::to_string(allNumbers[i]) + " has more than 3 digits (must be between -999 and 999).\n";
+                        break;
+                    }
+                    parsedData.push_back(allNumbers[i]);
+                }
+            }
+        }
+
+        if (!errorMsg.empty()) {
+            std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            
+            // Read file again to preserve content but inject warning
+            std::ifstream inFileForErr(filePath);
+            std::string contentWithWarning = "";
+            bool warningInserted = false;
+
+            if (inFileForErr.is_open()) {
+                std::string l;
+                while (std::getline(inFileForErr, l)) {
+                    // Prevent piling up old warnings
+                    if (l.find("# [WARNING]") != std::string::npos) continue;
+                    
+                    contentWithWarning += l + "\n";
+
+                    if (!warningInserted && l.find("# -----------------------------------") != std::string::npos) {
+                        contentWithWarning += errorMsg;
+                        warningInserted = true;
+                    }
+                }
+                inFileForErr.close();
+            }
+
+            if (!warningInserted) {
+                contentWithWarning = errorMsg + contentWithWarning;
+            }
+
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
+
             std::system(("start notepad " + filePath).c_str());
             return;
         }
@@ -129,13 +181,11 @@ namespace Controllers {
 
         std::string header = "# --- LINKED LIST VISUALIZER DATA ---\n"
                              "# DETAILED INSTRUCTIONS:\n"
-                             "# 1. Type your integer values directly below this line.\n"
-                             "#    (Maximum recommended size is 15 nodes and each value must be 3 digits for best visual experience).\n"
-                             "# 2. You can put all numbers on one line separated by spaces:\n"
-                             "#    Example: 10 20 30 40 50\n"
-                             "# 3. Or, you can put each number on a new line (hit Enter).\n"
-                             "# 4. Do NOT use commas (,) or other punctuation marks.\n"
-                             "# 5. When you are done:\n"
+                             "# 1. Type the number of elements 'n' first.\n"
+                             "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
+                             "#    (Max n is 15. Values must be between -999 and 999).\n"
+                             "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                             "# 4. When you are done:\n"
                              "#    - Save this file by pressing Ctrl + S\n"
                              "#    - Go back to the Application and click the 'Go' button.\n"
                              "# -----------------------------------\n";
@@ -148,7 +198,7 @@ namespace Controllers {
             while (std::getline(inFile, line)) {
                 size_t startPos = line.find_first_not_of(" \t\r\n");
                 if (startPos == std::string::npos) {
-                    // Tránh ghi quá nhiều dòng trống. Chỉ giữ dòng trống nếu userContent không rỗng (chứa số rồi)
+                    // Avoid writing too many empty lines. Only keep empty lines if userContent is not empty.
                     if (!userContent.empty()) userContent += "\n";
                 } else if (line[startPos] != '#') {
                     userContent += line + "\n";
@@ -277,7 +327,7 @@ namespace Controllers {
         }
 
         if (!found) {
-            std::cout << "[UI LOG] Không tìm thấy giá trị: " << targetValue << std::endl;
+            std::cout << "[UI LOG] Value not found: " << targetValue << std::endl;
         }
 
         ctx.animManager.addAnimation(std::move(sequence));
@@ -340,7 +390,7 @@ namespace Controllers {
             }
 
             if (!found) {
-                std::cout << "[UI LOG] Không tìm thấy giá trị " << oldVal << " để cập nhật!\n";
+                std::cout << "[UI LOG] Value " << oldVal << " not found for update!\n";
             }
         }
 

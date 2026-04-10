@@ -24,7 +24,6 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     };
 
     applyBtnColors(btnBack); 
-    btnBack.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, Config::UI::Colors::ButtonPressed, sf::Color(255, 50, 50));
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
 
     sf::Color panelColor(122, 160, 142);
@@ -68,8 +67,25 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     }
 
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
+        bool enterPressed = false;
+        if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
+            if (keyEvent->code == sf::Keyboard::Key::Enter) {
+                enterPressed = true;
+            }
+        }
+
+        bool allInputsValid = true;
         for (auto& input : activeInputs) {
             input.handleEvent(event);
+            if (!input.valid()) {
+                allInputsValid = false;
+            }
+        }
+
+        if (enterPressed && allInputsValid && !activeSubButtons.empty()) {
+            goClicked = true;
+            clickedSubButtonIndex = static_cast<int>(activeSubButtons.size() - 1);
+            activeSubButtons[clickedSubButtonIndex].animateClick();
         }
     }
 

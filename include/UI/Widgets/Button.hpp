@@ -39,10 +39,11 @@ public:
     void update(sf::Vector2i mousePos);
     bool isClicked(const sf::Event& event);
     void draw();
-
-
+    void animateClick();
 
 private:
     void centerText();
+    bool isAnimated = false;
+    sf::Clock animationClock;
 };
 }
