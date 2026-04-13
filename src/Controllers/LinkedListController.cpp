@@ -258,32 +258,62 @@ namespace Controllers {
         }
 
         // TAIL & AT POS
-        int targetPos = (sel == 1) ? model.getLogicalList().size() : pos;
+        int currentSize = (int)graph.getNodes().size();
+        std::cout << "[UI DEBUG] handleInsert: sel=" << sel << ", pos=" << pos << ", size=" << currentSize << std::endl;
+        
+        // Bounds check for AT POS
+        if (sel == 2 && (pos < 0 || pos > currentSize)) {
+            std::cout << "[UI LOG] Invalid position: " << pos << " (size: " << currentSize << ")" << std::endl;
+            auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+            if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::insertAt());
+            addHighlight(sequence, 0); // if pos < 0 or pos > size: return
+            sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.4f));
+            sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
+                if (codeViewer) codeViewer->hide();
+            }));
+            ctx.animManager.addAnimation(std::move(sequence));
+            return;
+        }
+
+        int targetPos = (sel == 1) ? currentSize : pos;
         auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
 
         // Set pseudo-code based on operation
         if (sel == 1) {
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::insertTail());
+            addHighlight(sequence, 0); // "if head == null"
+            if (graph.getNodes().empty()) {
+                addHighlight(sequence, 1); // "head = new Node(val)"
+            } else {
+                addHighlight(sequence, 2); // "else"
+                addHighlight(sequence, 3); // "curr = head"
+            }
         } else {
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::insertAt());
+            addHighlight(sequence, 0); // Check bounds
+            addHighlight(sequence, 1); // if pos == 0
+            addHighlight(sequence, 2); // else
+            addHighlight(sequence, 3); // pre = head
         }
 
-        addHighlight(sequence, 0); // "curr = head"
+        // TRAVERSAL
+        int steps = 0;
+        if (sel == 1) steps = (int)graph.getNodes().size() - 1; // Find last node
+        else steps = targetPos - 1; // Find predecessor (node at pos-1)
 
-        int steps = std::min(targetPos, (int)graph.getNodes().size());
         for (int i = 0; i < steps; ++i) {
             auto* uiNode = graph.getNode(i);
             if (uiNode) {
-                addHighlight(sequence, 1); // "while/for loop"
+                addHighlight(sequence, (sel == 1) ? 4 : 4); // "while/for loop"
                 sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                addHighlight(sequence, 2); // "curr = curr.next"
+                addHighlight(sequence, (sel == 1) ? 5 : 5); // "curr/pre = curr/pre.next"
                 sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
             }
         }
 
         // Highlight the insert lines
-        int insertLineStart = (sel == 1) ? 3 : 3; // both start at line 3
-        addHighlight(sequence, insertLineStart); // "newNode = new Node(val)"
+        int insertLineStart = (sel == 1) ? 6 : 6; // newNode = new Node
+        addHighlight(sequence, insertLineStart);
 
         sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, sel, targetPos, val, insertLineStart]() {
             bool success = false;
@@ -305,9 +335,13 @@ namespace Controllers {
             }
         }));
 
-        addHighlight(sequence, insertLineStart + 1); // "curr.next = newNode" or "newNode.next = curr.next"
-        sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.5f));
+        if (sel == 2) {
+             addHighlight(sequence, 7); // newNode.next = pre.next
+             sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.3f));
+             addHighlight(sequence, 8); // pre.next = newNode
+        }
 
+        sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.5f));
         sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
             if (codeViewer) codeViewer->hide();
         }));
@@ -321,11 +355,12 @@ namespace Controllers {
 
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::deleteHead());
 
-            addHighlight(sequence, 0); // "temp = head"
+            addHighlight(sequence, 0); // "if head == null"
+            addHighlight(sequence, 1); // "temp = head"
             sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.4f));
-            addHighlight(sequence, 1); // "head = head.next"
+            addHighlight(sequence, 2); // "head = head.next"
             sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.4f));
-            addHighlight(sequence, 2); // "delete temp"
+            addHighlight(sequence, 3); // "delete temp"
 
             sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
                 model.deleteHead();
@@ -344,38 +379,68 @@ namespace Controllers {
         }
 
         // TAIL & AT POS
-        int currentSize = model.getLogicalList().size();
-        if (currentSize == 0) return;
-        
+        int currentSize = (int)graph.getNodes().size();
         int targetPos = (sel == 1) ? currentSize - 1 : pos;
-        if (targetPos < 0 || targetPos >= currentSize) return;
+
+        std::cout << "[UI DEBUG] handleRemove: sel=" << sel << ", targetPos=" << targetPos << ", size=" << currentSize << std::endl;
+
+        if (targetPos < 0 || targetPos >= currentSize) {
+            std::cout << "[UI LOG] Invalid position for removal: " << targetPos << std::endl;
+            auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+            if (sel == 1) {
+                if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::deleteTail());
+                addHighlight(sequence, 0); // if head == null
+            } else {
+                if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::deleteAt());
+                addHighlight(sequence, 0); // if pos < 0 or pos >= size
+            }
+            sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.6f));
+            sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
+                if (codeViewer) codeViewer->hide();
+            }));
+            ctx.animManager.addAnimation(std::move(sequence));
+            return;
+        }
 
         auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
 
         // Set pseudo-code based on operation
         if (sel == 1) {
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::deleteTail());
+            addHighlight(sequence, 0); // if head == null
+            addHighlight(sequence, 1); // if head.next == null
+            if (currentSize > 1) {
+                addHighlight(sequence, 2); // else
+                addHighlight(sequence, 3); // pre = head
+            }
         } else {
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::deleteAt());
-        }
-
-        addHighlight(sequence, 0); // "curr = head"
-
-        for (int i = 0; i <= targetPos; ++i) {
-            auto* uiNode = graph.getNode(i);
-            if (uiNode) {
-                addHighlight(sequence, 1); // "while/for loop"
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                if (i < targetPos) {
-                    addHighlight(sequence, 2); // "curr = curr.next"
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-                }
+            addHighlight(sequence, 0); // if pos < 0 ...
+            addHighlight(sequence, 1); // if pos == 0
+            if (targetPos > 0) {
+                addHighlight(sequence, 2); // else
+                addHighlight(sequence, 3); // pre = head
             }
         }
 
-        // Highlight the delete lines
-        int deleteLineStart = 3; // "temp = curr.next" or "delete curr.next"
-        addHighlight(sequence, deleteLineStart);
+        // TRAVERSAL
+        int steps = 0;
+        if (sel == 1) steps = currentSize - 2; // Find node before tail
+        else steps = targetPos - 1; // Find predecessor
+
+        for (int i = 0; i < steps; ++i) {
+            auto* uiNode = graph.getNode(i);
+            if (uiNode) {
+                addHighlight(sequence, 4); // while/for loop condition
+                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
+                addHighlight(sequence, 5); // pre = pre.next
+                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
+            }
+        }
+
+        // Lines for removal
+        int lineStart = (sel == 1) ? 6 : 6; // del = pre.next
+        addHighlight(sequence, lineStart);
 
         sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, sel, targetPos]() {
             if (sel == 1) model.deleteTail();
@@ -386,9 +451,11 @@ namespace Controllers {
             triggerLayout();
         }));
 
-        addHighlight(sequence, deleteLineStart + 1);
-        sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.5f));
+        addHighlight(sequence, (sel == 1) ? 7 : 7); // pre.next = del.next or pre.next = null
+        sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.3f));
+        addHighlight(sequence, 8); // delete del
 
+        sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.5f));
         sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
             if (codeViewer) codeViewer->hide();
         }));
@@ -448,34 +515,49 @@ namespace Controllers {
         auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
 
         if (sel == 0) { // UPDATE AT POS
-            int currentSize = model.getLogicalList().size();
-            if (pos < 0 || pos >= currentSize) return; 
+            int currentSize = (int)graph.getNodes().size();
+            std::cout << "[UI DEBUG] handleUpdate: pos=" << pos << ", size=" << currentSize << std::endl;
+            if (pos < 0 || pos >= currentSize) {
+                std::cout << "[UI LOG] Invalid position for update: " << pos << std::endl;
+                if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::updateAt());
+                addHighlight(sequence, 0); // bounds check
+                sequence->add(std::make_unique<UI::Animations::WaitAnimation>(0.6f));
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this]() {
+                    if (codeViewer) codeViewer->hide();
+                }));
+                ctx.animManager.addAnimation(std::move(sequence));
+                return;
+            } 
 
             if (codeViewer) codeViewer->setCode(Core::DSA::PseudoCode::updateAt());
 
-            addHighlight(sequence, 0); // "curr = head"
+            addHighlight(sequence, 0); // bounds check
+            addHighlight(sequence, 1); // curr = head
 
-            for (int i = 0; i <= pos; ++i) {
+            for (int i = 0; i < pos; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (!uiNode) continue;
 
-                addHighlight(sequence, 1); // "for i = 0 to pos:"
+                addHighlight(sequence, 2); // loop condition
                 sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                
-                if (i == pos) {
-                    addHighlight(sequence, 3); // "curr.val = newVal"
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.2f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, pos, newVal]() {
-                        if (model.updateAt(pos, newVal)) {
-                            graph.updateNodeValue(pos, std::to_string(newVal));
-                        }
-                    }));
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
-                } else {
-                    addHighlight(sequence, 2); // "curr = curr.next"
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-                }
+                addHighlight(sequence, 3); // curr = curr.next
+                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
+            }
+
+            // Finish at target
+            auto* uiNode = graph.getNode(pos);
+            if (uiNode) {
+                 addHighlight(sequence, 2); // final check
+                 sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
+                 addHighlight(sequence, 4); // curr.val = newVal
+                 sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.2f, 0.15f));
+                 sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, pos, newVal]() {
+                    if (model.updateAt(pos, newVal)) {
+                        graph.updateNodeValue(pos, std::to_string(newVal));
+                    }
+                 }));
+                 sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
+                 sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
             }
 
         } else if (sel == 1) { // UPDATE BY VALUE
@@ -504,7 +586,7 @@ namespace Controllers {
                             graph.updateNodeValue(idx, std::to_string(newVal));
                         }
                     }));
-                    addHighlight(sequence, 4); // "return"
+                    addHighlight(sequence, 4); // "return FOUND"
                     sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
                     sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
                     found = true;
@@ -518,7 +600,7 @@ namespace Controllers {
             }
 
             if (!found) {
-                std::cout << "[UI LOG] Value " << oldVal << " not found for update!\n";
+                addHighlight(sequence, 6); // return NOT FOUND
             }
         }
 
