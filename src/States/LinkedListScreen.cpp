@@ -113,6 +113,7 @@ void LinkedListScreen::update() {
         ctx.animManager.clearAll();
         myGraph.resetVisuals();
         controller.forceSnapLayout(); 
+        codeViewer.hide();
     }
     DSAScreenBase::update();
 }

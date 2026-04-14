@@ -52,9 +52,15 @@ namespace UI::Animations {
     void AnimationManager::skipToEnd() {
         if (!activeAnimations.empty()) {
             bool wasPaused = paused;
-            paused = false;     
-            update(9999.0f);    
-            paused = wasPaused; 
+            paused = false;
+
+            int failsafe = 1000; 
+            while (!activeAnimations.empty() && failsafe > 0) {
+                update(9999.0f);
+                failsafe--;
+            }
+
+            paused = wasPaused;
         }
     }
 
