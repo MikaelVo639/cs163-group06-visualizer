@@ -9,6 +9,8 @@
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <UI/Shapes/PauseIcon.hpp>
 #include <UI/Shapes/PlayIcon.hpp>
+#include <UI/Shapes/NextIcon.hpp>
+#include <UI/Shapes/PrevIcon.hpp>
 #include <vector>
 #include <string>
 #include <optional>
@@ -35,6 +37,8 @@ namespace UI::Widgets {
         Button btnNext;
         UI::Shapes::PlayIcon iconPlay;
         UI::Shapes::PauseIcon iconPause;
+        UI::Shapes::NextIcon iconNext;
+        UI::Shapes::PrevIcon iconPrev;
 
         // Menu State
         ActiveMenu activeMenu = ActiveMenu::None;

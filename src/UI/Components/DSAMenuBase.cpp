@@ -7,9 +7,9 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
-      btnPrev(context, "|<", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPrev(context, "", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnNext(context, ">|", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnNext(context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
                   sf::Vector2f{100.f, context.window.getSize().y - 80.f}, 
@@ -36,13 +36,16 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     panelBg.setOutlineColor(sf::Color(200, 220, 200));
 
     speedSlider.setValue(50.f);
-    float playBtnX = (context.window.getSize().x - 200.f) / 2.f + 70.f;
-    float playBtnY = context.window.getSize().y - 95.f;
-    float centerX = playBtnX + 30.f; 
-    float centerY = playBtnY + 20.f;
 
-    iconPlay.setPosition({centerX, centerY});
-    iconPause.setPosition({centerX, centerY});
+    sf::Vector2f prevPos = btnPrev.getPosition();
+    iconPrev.setPosition({prevPos.x + 30.f, prevPos.y + 20.f});
+
+    sf::Vector2f playPos = btnPlay.getPosition();
+    iconPlay.setPosition({playPos.x + 30.f, playPos.y + 20.f});
+    iconPause.setPosition({playPos.x + 30.f, playPos.y + 20.f});
+
+    sf::Vector2f nextPos = btnNext.getPosition();
+    iconNext.setPosition({nextPos.x + 30.f, nextPos.y + 20.f});
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
@@ -185,12 +188,29 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
         btnPlay.draw();
         btnNext.draw();
 
-        if (ctx.animManager.isPaused()) {
-            window.draw(iconPlay);
-        } else {
-            window.draw(iconPause);
+        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, 2.f});
+        window.draw(iconPrev);
+        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, -2.f});
+
+        bool playPressed = btnPlay.isCurrentlyPressed();
+        if (playPressed) {
+            iconPlay.move({0.f, 2.f});
+            iconPause.move({0.f, 2.f});
         }
+
+        if (ctx.animManager.isPaused()) window.draw(iconPlay);
+        else window.draw(iconPause);
+
+        if (playPressed) {
+            iconPlay.move({0.f, -2.f});
+            iconPause.move({0.f, -2.f});
+        }
+
+        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, 2.f});
+        window.draw(iconNext);
+        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, -2.f});
     }
+
     speedSlider.draw();
 }
 

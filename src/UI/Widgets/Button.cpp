@@ -121,6 +121,10 @@ void Button::animateClick() {
     animationClock.restart();
 }
 
+bool Button::isCurrentlyPressed() const {
+    return isPressed || (isAnimated && animationClock.getElapsedTime().asSeconds() < 0.1f);
+}
+
 void Button::draw() {
     ctx.window.draw(shape);
     
