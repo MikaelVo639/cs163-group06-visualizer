@@ -143,10 +143,13 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
-      btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
-      btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
-      btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
-      title(context.font, titleText, 24)
+      btnPrev(context, "", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnNext(context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      title(context.font, titleText, 24),
+      speedSlider(context, 
+                  sf::Vector2f{100.f, context.window.getSize().y - 80.f}, 
+                  sf::Vector2f{300.f, 15.f})
 {
     // Initialize Title
     title.setFillColor(Config::UI::Colors::ButtonHover);
@@ -162,10 +165,23 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
 
+    
     sf::Color panelColor(122, 160, 142);
     panelBg.setFillColor(panelColor);
     panelBg.setOutlineThickness(2.f);
     panelBg.setOutlineColor(sf::Color(200, 220, 200));
+
+    speedSlider.setValue(50.f);
+
+    sf::Vector2f prevPos = btnPrev.getPosition();
+    iconPrev.setPosition({prevPos.x + 30.f, prevPos.y + 20.f});
+
+    sf::Vector2f playPos = btnPlay.getPosition();
+    iconPlay.setPosition({playPos.x + 30.f, playPos.y + 20.f});
+    iconPause.setPosition({playPos.x + 30.f, playPos.y + 20.f});
+
+    sf::Vector2f nextPos = btnNext.getPosition();
+    iconNext.setPosition({nextPos.x + 30.f, nextPos.y + 20.f});
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
@@ -234,6 +250,33 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
             }
         }
     }
+
+    speedSlider.handleEvent(event);
+
+    if (!ctx.animManager.empty()) {
+        
+        if (btnPlay.isClicked(event)) {
+            ctx.animManager.togglePause();   
+        }
+
+        if (btnNext.isClicked(event)) {
+            ctx.animManager.skipToEnd();
+            ctx.animManager.setPaused(false);
+        }
+
+        if (btnPrev.isClicked(event)) {
+            ctx.animManager.clearAll();
+            ctx.animManager.setPaused(false);
+            std::cout << "[INFO] Animation Cancelled.\n";
+
+            cancelClicked = true;
+        }
+    } 
+    else {
+        if (ctx.animManager.isPaused()) {
+            ctx.animManager.setPaused(false);
+        }
+    }
 }
 
 void DSAMenuBase::update(sf::Vector2i mousePos) {
@@ -243,9 +286,24 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    btnPrev.update(mousePos); 
-    btnPlay.update(mousePos); 
-    btnNext.update(mousePos);
+    if (!ctx.animManager.empty()) {
+        btnPrev.update(mousePos);
+        btnPlay.update(mousePos);
+        btnNext.update(mousePos);
+    }
+
+    speedSlider.update(mousePos); 
+
+    float sliderVal = speedSlider.getValue(); 
+    
+    float speed = 1.0f;
+    if (sliderVal <= 50.f) {
+        speed = 0.1f + (sliderVal / 50.f) * 0.9f;
+    } else {
+        speed = 1.0f + ((sliderVal - 50.f) / 50.f) * 2.0f;
+    }
+        
+    ctx.animManager.setSpeedScale(speed);
 }
 
 void DSAMenuBase::draw(sf::RenderWindow& window) {
@@ -260,9 +318,36 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
         if (dropdownAction) dropdownAction->draw();
     }
 
-    btnPrev.draw(); 
-    btnPlay.draw(); 
-    btnNext.draw();
+    
+    if (!ctx.animManager.empty()) {
+        btnPrev.draw();
+        btnPlay.draw();
+        btnNext.draw();
+
+        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, 2.f});
+        window.draw(iconPrev);
+        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, -2.f});
+
+        bool playPressed = btnPlay.isCurrentlyPressed();
+        if (playPressed) {
+            iconPlay.move({0.f, 2.f});
+            iconPause.move({0.f, 2.f});
+        }
+
+        if (ctx.animManager.isPaused()) window.draw(iconPlay);
+        else window.draw(iconPause);
+
+        if (playPressed) {
+            iconPlay.move({0.f, -2.f});
+            iconPause.move({0.f, -2.f});
+        }
+
+        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, 2.f});
+        window.draw(iconNext);
+        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, -2.f});
+    }
+
+    speedSlider.draw();
 }
 
 void DSAMenuBase::updateLayout() {
@@ -323,6 +408,14 @@ bool DSAMenuBase::consumeGoClicked() {
         return true;
     }
     return false;
+}
+
+bool DSAMenuBase::consumeCancelClicked() { 
+    if (cancelClicked) { 
+        cancelClicked = false; 
+        return true; 
+    } 
+    return false; 
 }
 
 void DSAMenuBase::resetMenu() {
