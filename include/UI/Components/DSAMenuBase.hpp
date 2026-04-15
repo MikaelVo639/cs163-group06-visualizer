@@ -5,7 +5,12 @@
 #include <UI/Widgets/Button.hpp>
 #include <UI/Widgets/InputBar.hpp>
 #include <UI/Widgets/Dropdown.hpp>
+#include <UI/Widgets/Slider.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
+#include <UI/Shapes/PauseIcon.hpp>
+#include <UI/Shapes/PlayIcon.hpp>
+#include <UI/Shapes/NextIcon.hpp>
+#include <UI/Shapes/PrevIcon.hpp>
 #include <vector>
 #include <string>
 #include <optional>
@@ -26,9 +31,14 @@ namespace UI::Widgets {
         RoundedRectangleShape panelBg;
         
         // Timeline Controls
+        Slider speedSlider;
         Button btnPrev;
         Button btnPlay;
         Button btnNext;
+        UI::Shapes::PlayIcon iconPlay;
+        UI::Shapes::PauseIcon iconPause;
+        UI::Shapes::NextIcon iconNext;
+        UI::Shapes::PrevIcon iconPrev;
 
         // Menu State
         ActiveMenu activeMenu = ActiveMenu::None;
@@ -49,6 +59,9 @@ namespace UI::Widgets {
         bool goClicked = false;
         int clickedSubButtonIndex = -1;
 
+        // Flag for prev button
+        bool cancelClicked = false;
+
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);
         virtual ~DSAMenuBase() = default;
@@ -60,6 +73,7 @@ namespace UI::Widgets {
         // API for Controller (Screen)
         bool isBackClicked(const sf::Event& event) { return btnBack.isClicked(event); }
         bool consumeGoClicked(); // Returns true if Go was clicked, then resets it
+        bool consumeCancelClicked();
 
         ActiveMenu getActiveMenu() const { return activeMenu; }
         int getDropdownSelection() const { return lastDropdownIndex; }

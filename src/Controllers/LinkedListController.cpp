@@ -1,9 +1,7 @@
 #include "Controllers/LinkedListController.hpp"
+#include "Core/DSA/PseudoCodeData.hpp"
 #include "UI/DSA/LayoutEngine.hpp"
-#include "UI/Animations/Core/SequenceAnimation.hpp"
-#include "UI/Animations/Core/CallbackAnimation.hpp"
-#include "UI/Animations/Node/NodeColorAnimation.hpp"
-#include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "UI/Animations/Core/AnimStepBuilder.hpp"
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -14,8 +12,9 @@
 
 namespace Controllers {
 
-    LinkedListController::LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m)
-        : ctx(context), graph(g), model(m) {}
+    LinkedListController::LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m,
+                                               UI::Widgets::PseudoCodeViewer* viewer)
+        : ctx(context), graph(g), model(m), codeViewer(viewer) {}
 
     void LinkedListController::syncGraphEdges() {
         graph.clearEdges();
@@ -30,7 +29,18 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
+    void LinkedListController::forceSnapLayout() {
+        int numNodes = graph.getNodes().size();
+        for (int i = 0; i < numNodes; ++i) {
+            auto* node = graph.getNode(i);
+            if (node) {
+                node->setPosition({startX + i * spacing, startY});
+            }
+        }
+    }
+
     void LinkedListController::handleCreateRandom(int size) {
+        if (codeViewer) codeViewer->hide();
         model.clear();
         graph.clear();
 
@@ -44,6 +54,8 @@ namespace Controllers {
     }
 
     void LinkedListController::handleCreateFromFile() {
+        if (codeViewer) codeViewer->hide();
+
         std::string dirPath = "user_data";
         std::string filePath = dirPath + "/LinkedListData.txt";
 
@@ -216,93 +228,255 @@ namespace Controllers {
         std::system(("start notepad " + filePath).c_str());
     }
 
+    // ==================== INSERT ====================
+
     void LinkedListController::handleInsert(int sel, int pos, int val) {
+        using Builder = UI::Animations::AnimStepBuilder;
+
         if (sel == 0) { // HEAD
-            model.insertHead(val);
-            graph.insertNodeAt(0, std::to_string(val), {startX - spacing, startY});
-            syncGraphEdges();
-            triggerLayout();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertHead();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("create_node").wait()
+             .highlight("link_next").wait()
+             .highlight("update_head")
+             .callback([this, val]() {
+                 model.insertHead(val);
+                 graph.insertNodeAt(0, std::to_string(val), {startX - spacing, startY});
+                 syncGraphEdges();
+                 triggerLayout();
+             })
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
             return;
         }
 
         // TAIL & AT POS
-        int targetPos = (sel == 1) ? model.getLogicalList().size() : pos;
-        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
-
-        int steps = std::min(targetPos, (int)graph.getNodes().size());
-        for (int i = 0; i < steps; ++i) {
-            auto* uiNode = graph.getNode(i);
-            if (uiNode) {
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-            }
-        }
-
-        sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, sel, targetPos, val]() {
-            bool success = false;
-            int actualPos = 0;
-
-            if (sel == 1) { 
-                model.insertTail(val);
-                actualPos = model.getLogicalList().size() - 1;
-                success = true;
-            } else if (sel == 2) { 
-                success = model.insertAt(targetPos, val);
-                actualPos = targetPos;
-            }
-
-            if (success) {
-                graph.insertNodeAt(actualPos, std::to_string(val), {startX + actualPos * spacing, startY - 100.f});
-                syncGraphEdges();
-                triggerLayout();
-            }
-        }));
-
-        ctx.animManager.addAnimation(std::move(sequence));
-    }
-
-    void LinkedListController::handleRemove(int sel, int pos) {
-        if (sel == 0) { // HEAD
-            model.deleteHead();
-            graph.removeNodeAt(0);
-            syncGraphEdges();
-            triggerLayout();
-            return;
-        }
-
-        // TAIL & AT POS
-        int currentSize = model.getLogicalList().size();
-        if (currentSize == 0) return;
+        int currentSize = (int)graph.getNodes().size();
+        std::cout << "[UI DEBUG] handleInsert: sel=" << sel << ", pos=" << pos << ", size=" << currentSize << std::endl;
         
-        int targetPos = (sel == 1) ? currentSize - 1 : pos;
-        if (targetPos < 0 || targetPos >= currentSize) return;
+        // Bounds check for AT POS
+        if (sel == 2 && (pos < 0 || pos > currentSize)) {
+            std::cout << "[UI LOG] Invalid position: " << pos << " (size: " << currentSize << ")" << std::endl;
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
+            Builder b(codeDef, codeViewer);
+            b.highlight("bounds_check").finish();
+            ctx.animManager.addAnimation(b.build());
+            return;
+        }
 
-        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+        int targetPos = (sel == 1) ? currentSize : pos;
 
-        for (int i = 0; i <= targetPos; ++i) {
-            auto* uiNode = graph.getNode(i);
-            if (uiNode) {
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                if (i < targetPos) {
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
+        if (sel == 1) {
+            // INSERT TAIL
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertTail();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("check_null");
+            if (graph.getNodes().empty()) {
+                b.highlight("insert_empty");
+            } else {
+                b.highlight("else")
+                 .highlight("init_curr");
+            }
+
+            // TRAVERSAL
+            int steps = (int)graph.getNodes().size() - 1;
+            for (int i = 0; i < steps; ++i) {
+                auto* uiNode = graph.getNode(i);
+                if (uiNode) {
+                    b.highlight("loop_cond")
+                     .nodeHighlight(uiNode, 0.2f)
+                     .highlight("advance")
+                     .nodeUnhighlight(uiNode, 0.1f);
                 }
             }
+
+            b.highlight("insert_tail")
+             .callback([this, val]() {
+                 model.insertTail(val);
+                 int actualPos = model.getLogicalList().size() - 1;
+                 graph.insertNodeAt(actualPos, std::to_string(val), {startX + actualPos * spacing, startY - 100.f});
+                 syncGraphEdges();
+                 triggerLayout();
+             })
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
+
+        } else {
+            // INSERT AT POS
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("bounds_check")
+             .highlight("check_head")
+             .highlight("else")
+             .highlight("init_pre");
+
+            // TRAVERSAL
+            int steps = targetPos - 1;
+            for (int i = 0; i < steps; ++i) {
+                auto* uiNode = graph.getNode(i);
+                if (uiNode) {
+                    b.highlight("loop_cond")
+                     .nodeHighlight(uiNode, 0.2f)
+                     .highlight("advance")
+                     .nodeUnhighlight(uiNode, 0.1f);
+                }
+            }
+
+            b.highlight("create_node")
+             .callback([this, targetPos, val]() {
+                 bool success = model.insertAt(targetPos, val);
+                 if (success) {
+                     graph.insertNodeAt(targetPos, std::to_string(val), {startX + targetPos * spacing, startY - 100.f});
+                     syncGraphEdges();
+                     triggerLayout();
+                 }
+             })
+             .highlight("link_next").wait(0.3f)
+             .highlight("link_pre")
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
         }
-
-        sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, sel, targetPos]() {
-            if (sel == 1) model.deleteTail();
-            else if (sel == 2) model.deleteAt(targetPos);
-            
-            graph.removeNodeAt(targetPos);
-            syncGraphEdges();
-            triggerLayout();
-        }));
-
-        ctx.animManager.addAnimation(std::move(sequence));
     }
 
+    // ==================== REMOVE ====================
+
+    void LinkedListController::handleRemove(int sel, int pos) {
+        using Builder = UI::Animations::AnimStepBuilder;
+
+        if (sel == 0) { // HEAD
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteHead();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("check_null")
+             .highlight("save_temp").wait()
+             .highlight("advance").wait()
+             .highlight("delete")
+             .callback([this]() {
+                 model.deleteHead();
+                 graph.removeNodeAt(0);
+                 syncGraphEdges();
+                 triggerLayout();
+             })
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
+            return;
+        }
+
+        // TAIL & AT POS
+        int currentSize = (int)graph.getNodes().size();
+        int targetPos = (sel == 1) ? currentSize - 1 : pos;
+
+        std::cout << "[UI DEBUG] handleRemove: sel=" << sel << ", targetPos=" << targetPos << ", size=" << currentSize << std::endl;
+
+        if (targetPos < 0 || targetPos >= currentSize) {
+            std::cout << "[UI LOG] Invalid position for removal: " << targetPos << std::endl;
+            if (sel == 1) {
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
+                Builder b(codeDef, codeViewer);
+                b.highlight("check_null").finish();
+                ctx.animManager.addAnimation(b.build());
+            } else {
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
+                Builder b(codeDef, codeViewer);
+                b.highlight("bounds_check").finish();
+                ctx.animManager.addAnimation(b.build());
+            }
+            return;
+        }
+
+        if (sel == 1) {
+            // DELETE TAIL
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("check_null")
+             .highlight("single_node");
+            if (currentSize > 1) {
+                b.highlight("else")
+                 .highlight("init_pre");
+            }
+
+            // TRAVERSAL
+            int steps = currentSize - 2;
+            for (int i = 0; i < steps; ++i) {
+                auto* uiNode = graph.getNode(i);
+                if (uiNode) {
+                    b.highlight("loop_cond")
+                     .nodeHighlight(uiNode, 0.2f)
+                     .highlight("advance")
+                     .nodeUnhighlight(uiNode, 0.1f);
+                }
+            }
+
+            b.highlight("save_del")
+             .callback([this]() {
+                 model.deleteTail();
+                 graph.removeNodeAt((int)graph.getNodes().size() - 1);
+                 syncGraphEdges();
+                 triggerLayout();
+             })
+             .highlight("unlink").wait(0.3f)
+             .highlight("delete")
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
+
+        } else {
+            // DELETE AT POS
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("bounds_check")
+             .highlight("check_head");
+            if (targetPos > 0) {
+                b.highlight("else")
+                 .highlight("init_pre");
+            }
+
+            // TRAVERSAL
+            int steps = targetPos - 1;
+            for (int i = 0; i < steps; ++i) {
+                auto* uiNode = graph.getNode(i);
+                if (uiNode) {
+                    b.highlight("loop_cond")
+                     .nodeHighlight(uiNode, 0.2f)
+                     .highlight("advance")
+                     .nodeUnhighlight(uiNode, 0.1f);
+                }
+            }
+
+            b.highlight("save_del")
+             .callback([this, targetPos]() {
+                 model.deleteAt(targetPos);
+                 graph.removeNodeAt(targetPos);
+                 syncGraphEdges();
+                 triggerLayout();
+             })
+             .highlight("unlink").wait(0.3f)
+             .highlight("delete")
+             .finish();
+
+            ctx.animManager.addAnimation(b.build());
+        }
+    }
+
+    // ==================== SEARCH ====================
+
     void LinkedListController::handleSearch(int targetValue) {
-        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+        using Builder = UI::Animations::AnimStepBuilder;
+
+        auto codeDef = Core::DSA::PseudoCode::LinkedList::search();
+        Builder b(codeDef, codeViewer);
+
+        b.highlight("init_curr");
+
         int curr = model.getHeadIndex();
         int idx = 0;
         bool found = false;
@@ -311,56 +485,93 @@ namespace Controllers {
             UI::DSA::Node* uiNode = graph.getNode(idx);
             if (!uiNode) break;
 
-            sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.3f));
+            b.highlight("loop_cond")
+             .nodeHighlight(uiNode, 0.3f)
+             .highlight("check_val");
 
             if (model.getPool()[curr].value == targetValue) {
-                sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.3f, 0.2f));
-                sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.3f, 1.0f, 0.2f)); 
-                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.3f));
+                b.highlight("found")
+                 .nodeScale(uiNode, 1.0f, 1.3f, 0.2f)
+                 .nodeScale(uiNode, 1.3f, 1.0f, 0.2f)
+                 .nodeUnhighlight(uiNode, 0.3f);
                 found = true;
                 break; 
             } else {
-                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
+                b.highlight("advance")
+                 .nodeUnhighlight(uiNode, 0.1f);
             }
             curr = model.getPool()[curr].nextIndex;
             idx++;
         }
 
         if (!found) {
+            b.highlight("not_found");
             std::cout << "[UI LOG] Value not found: " << targetValue << std::endl;
         }
 
-        ctx.animManager.addAnimation(std::move(sequence));
+        b.finish();
+        ctx.animManager.addAnimation(b.build());
     }
 
+    // ==================== UPDATE ====================
+
     void LinkedListController::handleUpdate(int sel, int pos, int oldVal, int newVal) {
-        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+        using Builder = UI::Animations::AnimStepBuilder;
 
         if (sel == 0) { // UPDATE AT POS
-            int currentSize = model.getLogicalList().size();
-            if (pos < 0 || pos >= currentSize) return; 
+            int currentSize = (int)graph.getNodes().size();
+            std::cout << "[UI DEBUG] handleUpdate: pos=" << pos << ", size=" << currentSize << std::endl;
 
-            for (int i = 0; i <= pos; ++i) {
-                auto* uiNode = graph.getNode(i);
-                if (!uiNode) continue;
-
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                
-                if (i == pos) {
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.2f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, pos, newVal]() {
-                        if (model.updateAt(pos, newVal)) {
-                            graph.updateNodeValue(pos, std::to_string(newVal));
-                        }
-                    }));
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
-                } else {
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-                }
+            if (pos < 0 || pos >= currentSize) {
+                std::cout << "[UI LOG] Invalid position for update: " << pos << std::endl;
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
+                Builder b(codeDef, codeViewer);
+                b.highlight("bounds_check").finish();
+                ctx.animManager.addAnimation(b.build());
+                return;
             }
 
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("bounds_check")
+             .highlight("init_curr");
+
+            // TRAVERSAL
+            for (int i = 0; i < pos; ++i) {
+                auto* uiNode = graph.getNode(i);
+                if (!uiNode) continue;
+                b.highlight("loop_cond")
+                 .nodeHighlight(uiNode, 0.2f)
+                 .highlight("advance")
+                 .nodeUnhighlight(uiNode, 0.1f);
+            }
+
+            // Target node
+            auto* uiNode = graph.getNode(pos);
+            if (uiNode) {
+                b.highlight("loop_cond")
+                 .nodeHighlight(uiNode, 0.2f)
+                 .highlight("update_val")
+                 .nodeScale(uiNode, 1.0f, 1.2f, 0.15f)
+                 .callback([this, pos, newVal]() {
+                     if (model.updateAt(pos, newVal)) {
+                         graph.updateNodeValue(pos, std::to_string(newVal));
+                     }
+                 })
+                 .nodeScale(uiNode, 1.2f, 1.0f, 0.15f)
+                 .nodeUnhighlight(uiNode, 0.2f);
+            }
+
+            b.finish();
+            ctx.animManager.addAnimation(b.build());
+
         } else if (sel == 1) { // UPDATE BY VALUE
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::updateByValue();
+            Builder b(codeDef, codeViewer);
+
+            b.highlight("init_curr");
+
             int curr = model.getHeadIndex();
             int idx = 0;
             bool found = false;
@@ -369,35 +580,45 @@ namespace Controllers {
                 UI::DSA::Node* uiNode = graph.getNode(idx);
                 if (!uiNode) break;
 
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
+                b.highlight("loop_cond")
+                 .nodeHighlight(uiNode, 0.2f)
+                 .highlight("check_val");
 
                 if (model.getPool()[curr].value == oldVal) {
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.2f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, oldVal, newVal, idx]() {
-                        if (model.updateValue(oldVal, newVal)) {
-                            graph.updateNodeValue(idx, std::to_string(newVal));
-                        }
-                    }));
-                    sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
+                    b.highlight("update_val")
+                     .nodeScale(uiNode, 1.0f, 1.2f, 0.15f)
+                     .callback([this, oldVal, newVal, idx]() {
+                         if (model.updateValue(oldVal, newVal)) {
+                             graph.updateNodeValue(idx, std::to_string(newVal));
+                         }
+                     })
+                     .highlight("found")
+                     .nodeScale(uiNode, 1.2f, 1.0f, 0.15f)
+                     .nodeUnhighlight(uiNode, 0.2f);
                     found = true;
                     break;
                 } else {
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
+                    b.highlight("advance")
+                     .nodeUnhighlight(uiNode, 0.1f);
                 }
                 curr = model.getPool()[curr].nextIndex;
                 idx++;
             }
 
             if (!found) {
-                std::cout << "[UI LOG] Value " << oldVal << " not found for update!\n";
+                b.highlight("not_found");
             }
-        }
 
-        ctx.animManager.addAnimation(std::move(sequence));
+            b.finish();
+            ctx.animManager.addAnimation(b.build());
+        }
     }
 
+    // ==================== CLEAR ====================
+
     void LinkedListController::handleClearAll() {
+        if (codeViewer) codeViewer->hide();
+
         if (graph.isAnimating()) {
             model.clear();
             graph.clear(); 
