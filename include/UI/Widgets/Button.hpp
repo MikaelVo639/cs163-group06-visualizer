@@ -30,6 +30,7 @@ public:
 
     sf::Vector2f getPosition() const;
     sf::Vector2f getSize() const;
+    bool isCurrentlyPressed() const;
 
     void setPosition(sf::Vector2f pos);
     void setSize(sf::Vector2f size);

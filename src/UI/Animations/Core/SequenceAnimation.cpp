@@ -9,12 +9,14 @@ namespace UI::Animations {
     }
 
     void SequenceAnimation::update(float dt) {
-        if (sequence.empty()) return;
-
-        sequence.front()->update(dt);
-
-        if (sequence.front()->isFinished()) {
-            sequence.pop();
+        while (!sequence.empty() && dt > 0.f) {
+            sequence.front()->update(dt);
+            if (sequence.front()->isFinished()) {
+                sequence.pop();
+            } 
+            else {
+                break;
+            }
         }
     }
 
