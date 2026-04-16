@@ -40,11 +40,13 @@ namespace Core::DSA {
     void Trie::insert(const std::string& word) {
         int curr = rootIndex;
         for (char c : word) {
-            int charIndex = c - 'a'; 
+            int charIndex = c - 'a';
             
             if (pool[curr].children[charIndex] == -1) {
-                pool[curr].children[charIndex] = allocateNode();
+                int newNodeIdx = allocateNode(); 
+                pool[curr].children[charIndex] = newNodeIdx;
             }
+            
             curr = pool[curr].children[charIndex];
         }
         pool[curr].isEndOfWord = true;

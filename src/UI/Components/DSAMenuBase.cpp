@@ -282,6 +282,14 @@ bool DSAMenuBase::consumeCancelClicked() {
     return false; 
 }
 
+bool DSAMenuBase::consumeSkipClicked() { 
+    if (skipClicked) { 
+        skipClicked = false; 
+        return true; 
+    } 
+    return false; 
+}
+
 void DSAMenuBase::resetMenu() {
     activeMenu = ActiveMenu::None;
     lastDropdownIndex = -1;

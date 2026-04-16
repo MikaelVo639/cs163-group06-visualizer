@@ -78,6 +78,13 @@ void TrieScreen::update() {
         codeViewer.hide();
     }
 
+    if (uiMenu.consumeSkipClicked()) {
+        ctx.animManager.clearAll();     
+        myGraph.resetVisuals();         
+        controller.forceSnapLayout();   
+        codeViewer.hide();
+    }
+
     DSAScreenBase::update();
 }
 

@@ -100,7 +100,47 @@ namespace Controllers {
     }
 
     void TrieController::forceSnapLayout() {
-        triggerLayout(0.f); 
+        syncGraph(); 
+
+        std::unordered_map<int, sf::Vector2f> targetPositions;
+        const auto& pool = model.getPool();
+        int rootIdx = model.getRootIndex();
+        float currentLeafX = 0.f; 
+        
+        auto calculateDFS = [&](auto& self, int poolIdx, int depth) -> float {
+            std::vector<int> children;
+            for (int i = 0; i < 26; ++i) {
+                if (pool[poolIdx].children[i] != -1) children.push_back(pool[poolIdx].children[i]);
+            }
+            
+            float myX = 0.f;
+            if (children.empty()) { 
+                myX = currentLeafX;
+                currentLeafX += horizontalSpacing;
+            } else { 
+                float sumX = 0;
+                for (int child : children) sumX += self(self, child, depth + 1);
+                myX = sumX / children.size();
+            }
+            targetPositions[poolIdx] = {myX, startY + depth * verticalSpacing};
+            return myX;
+        };
+        
+        if (rootIdx != -1) {
+            calculateDFS(calculateDFS, rootIdx, 0);
+            
+            float offsetX = startX - targetPositions[rootIdx].x;
+            
+            for (auto& pair : targetPositions) {
+                pair.second.x += offsetX;
+                auto it = poolToGraphMap.find(pair.first);
+                if (it != poolToGraphMap.end()) {
+                    if (auto* node = graph.getNode(it->second)) {
+                        node->setPosition(pair.second); 
+                    }
+                }
+            }
+        }
     }
 
     // ==================== INSERT ====================
@@ -109,7 +149,6 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Trie::insert();
         Builder b(codeDef, codeViewer);
 
-        // Count how many characters
         int tempCurr = model.getRootIndex();
         int existingChars = 0;
         for (char c : word) {
@@ -122,7 +161,6 @@ namespace Controllers {
             }
         }
 
-        // pre insert
         model.insert(word); 
 
         b.highlight("init_curr");
@@ -136,9 +174,11 @@ namespace Controllers {
             b.highlight("loop_char");
             
             b.callback([this, currPoolIdx]() {
-                if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                    n->setFillColor(Config::UI::Colors::NodeHighlight); 
-                    n->setLabelColor(Config::UI::Colors::LabelHighlight);
+                if (poolToGraphMap.count(currPoolIdx)) {
+                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                        n->setFillColor(Config::UI::Colors::NodeHighlight); 
+                        n->setLabelColor(Config::UI::Colors::LabelHighlight);
+                    }
                 }
             }).wait(0.2f);
             
@@ -147,15 +187,18 @@ namespace Controllers {
             if (i >= existingChars) {
                 b.highlight("create_node")
                  .callback([this, currPoolIdx, nextPoolIdx, c]() {
+                     if (!poolToGraphMap.count(currPoolIdx)) return; 
                      int parentUiIdx = poolToGraphMap[currPoolIdx];
-                     sf::Vector2f parentPos = graph.getNode(parentUiIdx)->getPosition();
+                     auto* parentNode = graph.getNode(parentUiIdx);
+                     
+                     if (!parentNode) return; // KHIÊN BẢO VỆ CHỐNG CRASH TỌA ĐỘ
+                     sf::Vector2f parentPos = parentNode->getPosition();
                      
                      graph.addNode(std::string(1, c), parentPos); 
                      int newUiIdx = graph.getNodes().size() - 1;
                      poolToGraphMap[nextPoolIdx] = newUiIdx;
                      
                      graph.addEdge(parentUiIdx, newUiIdx, "");
-                     
                      triggerLayout();
                  })
                  .wait(0.4f);
@@ -163,12 +206,14 @@ namespace Controllers {
             
             b.highlight("advance")
              .callback([this, currPoolIdx]() {
-                if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                    n->setLabelColor(Config::UI::Colors::NodeText);
-                    if (model.getPool()[currPoolIdx].isEndOfWord) {
-                        n->setFillColor(sf::Color(70, 160, 100)); 
-                    } else {
-                        n->setFillColor(Config::UI::Colors::NodeFill); 
+                if (poolToGraphMap.count(currPoolIdx)) {
+                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                        n->setLabelColor(Config::UI::Colors::NodeText);
+                        if (model.getPool()[currPoolIdx].isEndOfWord) {
+                            n->setFillColor(sf::Color(70, 160, 100)); 
+                        } else {
+                            n->setFillColor(Config::UI::Colors::NodeFill); 
+                        }
                     }
                 }
              }).wait(0.1f);
@@ -178,17 +223,17 @@ namespace Controllers {
 
         b.highlight("set_end")
          .callback([this, currPoolIdx]() {
-             if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                 n->setFillColor(sf::Color(70, 160, 100)); 
+             if (poolToGraphMap.count(currPoolIdx)) {
+                 if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                     n->setFillColor(sf::Color(70, 160, 100)); 
+                 }
              }
-             syncGraph(); 
              triggerLayout(0.2f);
          })
          .finish();
 
         ctx.animManager.addAnimation(b.build());
     }
-
     // ==================== SEARCH ====================
     void TrieController::handleSearch(const std::string& word, bool isPrefix) {
         using Builder = UI::Animations::AnimStepBuilder;
