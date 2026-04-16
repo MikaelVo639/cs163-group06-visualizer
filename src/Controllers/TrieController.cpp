@@ -10,6 +10,10 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <random>
 
 namespace Controllers {
 
@@ -141,6 +145,191 @@ namespace Controllers {
                 }
             }
         }
+    }
+
+    // ==================== CREATE RANDOM ====================
+    void TrieController::handleCreateRandom(int count) {
+        if (codeViewer) codeViewer->hide();
+
+        // 1. Dọn dẹp sạch sẽ Trie cũ
+        handleClearAll();
+
+        // 2. Tạo ngẫu nhiên `count` từ (độ dài từ 3-5 ký tự)
+        std::vector<std::string> randomWords;
+        for (int i = 0; i < count; ++i) {
+            int len = 3 + rand() % 3; // Độ dài 3, 4, hoặc 5
+            std::string word = "";
+            for (int j = 0; j < len; ++j) {
+                word += (char)('a' + rand() % 26);
+            }
+            // Tránh trùng lặp từ ngẫu nhiên
+            if (std::find(randomWords.begin(), randomWords.end(), word) == randomWords.end()) {
+                randomWords.push_back(word);
+                model.insert(word); // Insert ngầm vào Pool
+            }
+        }
+
+        // 3. Ép UI vẽ và tản ra
+        syncGraph();
+        triggerLayout(0.6f);
+    }
+
+    // ==================== EDIT DATA FILE ====================
+    void TrieController::handleEditDataFile() {
+        std::string dirPath = "user_data";
+        std::string filePath = dirPath + "/TrieData.txt";
+
+        if (!std::filesystem::exists(dirPath)) {
+            std::filesystem::create_directories(dirPath);
+        }
+
+        std::string header = "# --- TRIE VISUALIZER DATA ---\n"
+                             "# DETAILED INSTRUCTIONS:\n"
+                             "# 1. Type the number of words 'n' first.\n"
+                             "# 2. Then type the 'n' words separated by spaces or newlines.\n"
+                             "#    (Max n is 15. Words must contain ONLY English letters a-z).\n"
+                             "# 3. Do NOT use numbers, commas (,) or other punctuation marks.\n"
+                             "# 4. When you are done:\n"
+                             "#    - Save this file by pressing Ctrl + S\n"
+                             "#    - Go back to the Application and click the 'Go' button.\n"
+                             "# -----------------------------------\n";
+
+        std::ifstream inFile(filePath);
+        std::string userContent = "";
+
+        if (inFile.is_open()) {
+            std::string line;
+            while (std::getline(inFile, line)) {
+                size_t startPos = line.find_first_not_of(" \t\r\n");
+                if (startPos == std::string::npos) {
+                    if (!userContent.empty()) userContent += "\n";
+                } else if (line[startPos] != '#') {
+                    userContent += line + "\n";
+                }
+            }
+            inFile.close();
+        }
+
+        std::ofstream outFile(filePath);
+        if (outFile.is_open()) {
+            outFile << header << userContent;
+            outFile.close();
+        }
+        
+        std::system(("start notepad " + filePath).c_str());
+    }
+
+    // ==================== CREATE FROM FILE ====================
+    void TrieController::handleCreateFromFile() {
+        if (codeViewer) codeViewer->hide();
+
+        std::string dirPath = "user_data";
+        std::string filePath = dirPath + "/TrieData.txt";
+
+        if (!std::filesystem::exists(dirPath)) {
+            handleEditDataFile(); // Tự động tạo file và mở nếu chưa tồn tại
+            std::cout << "[UI LOG] File not found. Created an empty file and opened Notepad.\n";
+            return;
+        }
+
+        // Smart Parser
+        std::string line;
+        std::vector<std::string> allTokens;
+        std::ifstream file(filePath);
+
+        while (std::getline(file, line)) {
+            size_t startPos = line.find_first_not_of(" \t\r\n");
+            if (startPos != std::string::npos && line[startPos] == '#') {
+                continue; // Bỏ qua comment
+            }
+
+            std::stringstream ss(line);
+            std::string token;
+            while (ss >> token) {
+                allTokens.push_back(token);
+            }
+        }
+        file.close();
+
+        std::string errorMsg = "";
+        int n = -1;
+        std::vector<std::string> parsedData;
+
+        if (allTokens.empty()) {
+            errorMsg = "# [WARNING] Could not read 'n'. Please enter the number of words first.\n";
+        } else {
+            try {
+                n = std::stoi(allTokens[0]);
+                if (n < 0) {
+                    errorMsg = "# [WARNING] Invalid count 'n' = " + std::to_string(n) + " (must be >= 0).\n";
+                } else if (n > 15) {
+                    errorMsg = "# [WARNING] Count 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 15.\n";
+                } else if (allTokens.size() - 1 < static_cast<size_t>(n)) {
+                    errorMsg = "# [WARNING] Expected " + std::to_string(n) + " words, but found only " + std::to_string(allTokens.size() - 1) + ".\n";
+                } else {
+                    for (int i = 1; i <= n; ++i) {
+                        std::string word = allTokens[i];
+                        bool valid = true;
+                        
+                        // Kiểm tra và tự động convert in hoa -> in thường
+                        for (char& c : word) {
+                            if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+                            if (c < 'a' || c > 'z') { valid = false; break; }
+                        }
+                        
+                        if (!valid) {
+                            errorMsg = "# [WARNING] Word '" + allTokens[i] + "' is invalid. Only English letters (a-z) are allowed.\n";
+                            break;
+                        }
+                        parsedData.push_back(word);
+                    }
+                }
+            } catch (...) {
+                errorMsg = "# [WARNING] The first value must be an Integer indicating the number of words.\n";
+            }
+        }
+
+        // Báo lỗi và ghi ngược lại vào Notepad
+        if (!errorMsg.empty()) {
+            std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            std::ifstream inFileForErr(filePath);
+            std::string contentWithWarning = "";
+            bool warningInserted = false;
+
+            if (inFileForErr.is_open()) {
+                std::string l;
+                while (std::getline(inFileForErr, l)) {
+                    if (l.find("# [WARNING]") != std::string::npos) continue;
+                    contentWithWarning += l + "\n";
+                    if (!warningInserted && l.find("# -----------------------------------") != std::string::npos) {
+                        contentWithWarning += errorMsg;
+                        warningInserted = true;
+                    }
+                }
+                inFileForErr.close();
+            }
+
+            if (!warningInserted) contentWithWarning = errorMsg + contentWithWarning;
+
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
+
+            std::system(("start notepad " + filePath).c_str());
+            return;
+        }
+
+        // Apply Data hoàn hảo
+        handleClearAll(); // Xóa cũ đi
+
+        for (const std::string& word : parsedData) {
+            model.insert(word); // Nạp ngầm vào RAM
+        }
+
+        syncGraph();          // Ép UI vẽ lên màn hình
+        triggerLayout(0.6f);  // Bay vào vị trí
     }
 
     // ==================== INSERT ====================

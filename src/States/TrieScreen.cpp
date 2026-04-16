@@ -44,11 +44,24 @@ void TrieScreen::handleEvent(const sf::Event& event) {
 void TrieScreen::handleMenuAction() {
     using namespace UI::Widgets;
     ActiveMenu menu = uiMenu.getActiveMenu();
+    int sel = uiMenu.getDropdownSelection();
     const auto& inputs = uiMenu.getInputs();
 
     std::string word = !inputs.empty() ? inputs[0].getText() : "";
 
-    if (menu == ActiveMenu::Insert) {
+    if (menu == ActiveMenu::Create) {
+        if (sel == 0) { // Random
+            std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
+            if (sizeStr.empty()) return;
+            int count = std::stoi(sizeStr);
+            controller.handleCreateRandom(count);
+        } else if (sel == 1) { // File
+            int subBtn = uiMenu.getClickedSubButtonIndex();
+            if (subBtn == 0) controller.handleEditDataFile();
+            else if (subBtn == 1) controller.handleCreateFromFile();
+        }
+    }
+    else if (menu == ActiveMenu::Insert) {
         if (!word.empty()) controller.handleInsert(word);
     }
     else if (menu == ActiveMenu::Search) {

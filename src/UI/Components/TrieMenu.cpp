@@ -60,21 +60,17 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     float gap = 15.f; 
 
     if (type == ActiveMenu::Create) {
-        // 1. Change options to reflect Trie data (Sample words vs File)
-        int sel = createDropdown({"Sample", "File"}, currentX, 160.f);
+        int sel = createDropdown({"Random", "File"}, currentX, 160.f);
         currentX += 160.f + gap;
 
-        if (sel == 0) { // Sample (Standard set of words like "app", "apple", "ball")
-            // We don't necessarily need a "Size" input for a sample, 
-            // but if you want to allow a custom number of random words:
+        if (sel == 0) { 
             createInput("Count", currentX, 120.f, InputType::Integer);
             currentX += 120.f + gap;
             
             createExecuteBtn(currentX);
             currentX += 90.f;
         } 
-        else if (sel == 1) { // File (Loading a dictionary file)
-            // Keep the File logic the same as it's a standard feature
+        else if (sel == 1) {
             activeSubButtons.emplace_back(ctx, "Edit", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
             activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
             currentX += 90.f + gap;

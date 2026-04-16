@@ -31,6 +31,9 @@ namespace Controllers {
                        UI::Widgets::PseudoCodeViewer* viewer = nullptr);
 
         void forceSnapLayout();
+        void handleCreateRandom(int count);
+        void handleCreateFromFile();
+        void handleEditDataFile();
         void handleInsert(const std::string& word);
         void handleSearch(const std::string& word, bool isPrefix = false);
         void handleRemove(const std::string& word);
