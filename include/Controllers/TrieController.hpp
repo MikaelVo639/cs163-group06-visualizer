@@ -1,29 +1,40 @@
 #pragma once
+
 #include "Core/DSA/Trie.hpp"
-#include "UI/DSA/Graph.hpp" // Adjust path based on your project structure
+#include "UI/DSA/Graph.hpp" 
 #include "Core/AppContext.hpp"
+#include "UI/Widgets/PseudoCodeViewer.hpp"
+#include <string>
+#include <unordered_map>
 
 namespace Controllers {
 
-class TrieController {
-private:
-    AppContext& ctx;
-    UI::DSA::Graph& graph;
-    Core::DSA::Trie& model;
+    class TrieController {
+    private:
+        AppContext& ctx;
+        UI::DSA::Graph& graph;
+        Core::DSA::Trie& model;
+        UI::Widgets::PseudoCodeViewer* codeViewer;
 
-public:
-    // This constructor MUST match what you call in TrieScreen's initializer list
-    TrieController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Trie& m)
-        : ctx(context), graph(g), model(m) {}
+        float startX = 800.f;
+        float startY = 300.f;
+        float verticalSpacing = 130.f;
+        float horizontalSpacing = 100.f;
 
-    // Dummy versions of the handlers called by handleMenuAction
-    void handleInsert(const std::string& word) {}
-    void handleSearch(const std::string& word, bool isPrefix) {}
-    void handleRemove(const std::string& word) {}
-    void handleClearAll() {
-        model.clear();
-        graph.clear();
-    }
-};
+        std::unordered_map<int, int> poolToGraphMap;
 
-}
+        void syncGraph();
+        void triggerLayout(float duration = 0.5f);
+
+    public:
+        TrieController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Trie& m,
+                       UI::Widgets::PseudoCodeViewer* viewer = nullptr);
+
+        void forceSnapLayout();
+        void handleInsert(const std::string& word);
+        void handleSearch(const std::string& word, bool isPrefix = false);
+        void handleRemove(const std::string& word);
+        void handleClearAll();
+    };
+
+} // namespace Controllers

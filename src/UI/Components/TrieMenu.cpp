@@ -9,7 +9,7 @@ TrieMenu::TrieMenu(AppContext& context)
 }
 
 std::vector<std::string> TrieMenu::getMainButtonLabels() const {
-    return {"Create", "Insert", "Delete", "Search", "Clear All"};
+    return {"Create", "Insert", "Erase", "Search", "Clear All"};
 }
 
 void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
@@ -87,7 +87,7 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
 
     else if (type == ActiveMenu::Insert) {
         // 1. Create a single text input for the word
-        createInput("Word", currentX, 200.f, InputType::AnyText);
+        createInput("Word", currentX, 200.f, InputType::Word);
         currentX += 200.f + gap;
 
         // 2. Add the Go button
@@ -96,7 +96,7 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     }
 
     else if (type == ActiveMenu::Remove) {
-        createInput("Word", currentX, 200.f, InputType::AnyText);
+        createInput("Word", currentX, 200.f, InputType::Word);
         currentX += 200.f + gap;
 
         createExecuteBtn(currentX);

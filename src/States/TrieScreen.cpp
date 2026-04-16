@@ -1,16 +1,17 @@
 #include "States/TrieScreen.hpp"
 #include <iostream>
 
-// 1. The Constructor (You likely have this)
 TrieScreen::TrieScreen(AppContext& context)
     : DSAScreenBase(context), 
       uiMenu(context),
-      controller(context, myGraph, model) 
+      codeViewer(context.font),
+      controller(context, myGraph, model, &codeViewer) 
 {
     myGraph.setDraggable(false);
+    sf::Vector2u winSize = context.window.getSize();
+    codeViewer.setPositionBottomRight(static_cast<float>(winSize.x), static_cast<float>(winSize.y), 50.f);
 }
 
-// 2. The Event Handler (The vtable needs this!)
 void TrieScreen::handleEvent(const sf::Event& event) {
     uiMenu.handleEvent(event);
     DSAScreenBase::handleEvent(event);
@@ -20,23 +21,68 @@ void TrieScreen::handleEvent(const sf::Event& event) {
     }
 
     if (uiMenu.consumeGoClicked()) {
+        if (myGraph.isAnimating()) {
+            std::cout << "[WARNING] Vui lòng đợi Animation hiện tại chạy xong!\n";
+            return;
+        }
+
         handleMenuAction();
+        uiMenu.clearInputs(); 
+
+        if (uiMenu.getActiveMenu() == UI::Widgets::ActiveMenu::Clean) {
+            uiMenu.resetMenu();
+        }
+    }
+
+    if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        if (keyPressed->code == sf::Keyboard::Key::Escape){
+            ctx.nextState = ScreenState::MainMenu;
+        }
     }
 }
 
-// 3. The Update Loop (The vtable needs this!)
+void TrieScreen::handleMenuAction() {
+    using namespace UI::Widgets;
+    ActiveMenu menu = uiMenu.getActiveMenu();
+    const auto& inputs = uiMenu.getInputs();
+
+    std::string word = !inputs.empty() ? inputs[0].getText() : "";
+
+    if (menu == ActiveMenu::Insert) {
+        if (!word.empty()) controller.handleInsert(word);
+    }
+    else if (menu == ActiveMenu::Search) {
+        if (!word.empty()) {
+            int sel = uiMenu.getDropdownSelection(); 
+            bool isPrefix = (sel == 1); 
+            controller.handleSearch(word, isPrefix); 
+        }
+    }
+    else if (menu == ActiveMenu::Remove) {
+        std::cout << "dsl";
+        if (!word.empty()) controller.handleRemove(word);
+    }
+    else if (menu == ActiveMenu::Clean) {
+        controller.handleClearAll();
+    }
+}
+
 void TrieScreen::update() {
-    uiMenu.update(sf::Mouse::getPosition(ctx.window));
+    sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
+    uiMenu.update(mousePos);
+
+    if (uiMenu.consumeCancelClicked()) {
+        ctx.animManager.clearAll();
+        myGraph.resetVisuals();
+        controller.forceSnapLayout(); 
+        codeViewer.hide();
+    }
+
     DSAScreenBase::update();
 }
 
-// 4. The Draw Loop (The vtable needs this!)
 void TrieScreen::draw() {
-    DSAScreenBase::draw();
-    uiMenu.draw(ctx.window);
-}
-
-// 5. Your logic handler
-void TrieScreen::handleMenuAction() {
-    std::cout << "Trie UI Action Triggered!" << std::endl;
+    DSAScreenBase::draw();       
+    uiMenu.draw(ctx.window);     
+    codeViewer.draw(ctx.window); 
 }
