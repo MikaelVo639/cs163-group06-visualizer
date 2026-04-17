@@ -13,95 +13,123 @@ std::vector<std::string> HeapMenu::getMainButtonLabels() const {
     return {"Create", "Insert", "Delete Root", "Find Maximum", "Clear All"};
 }
 
-void HeapMenu::setMainButtonEnabled(int index, bool enabled) {
-    if (index < 0 || index >= static_cast<int>(mainButtons.size())) return;
+bool HeapMenu::isInstantAction(int index) const {
+    // Index 4 maps to the "Clear All" action
+    return index == 4;
+}
 
-    if (!enabled) {
-        // Grey out: All states (idle, hover, pressed) become dark grey
-        sf::Color grey(70, 70, 70);
-        mainButtons[index].setColors(grey, grey, grey, Config::UI::Colors::ButtonText);
-    } else {
-        // Restore: Reset to original theme colors
-        mainButtons[index].setColors(
-            Config::UI::Colors::ButtonIdle,
-            Config::UI::Colors::ButtonHover,
-            Config::UI::Colors::ButtonPressed,
-            Config::UI::Colors::ButtonText
-        );
+void HeapMenu::setMainButtonEnabled(int index, bool enabled) {
+    // Simply call the base class function. 
+    // It will handle the mainButtonsEnabled vector AND the grey-out colors.
+    DSAMenuBase::setMainButtonEnabled(index, enabled);
+}
+
+void HeapMenu::updateLayout() {
+    DSAMenuBase::updateLayout();
+
+    if (mainButtons.empty()) return;
+
+    sf::Vector2f startPos = mainButtons[0].getPosition();
+    float btnWidth = 200.f; 
+    float btnHeight = 45.f;
+    float gap = 12.f;
+
+    for (int i = 0; i < (int)mainButtons.size(); ++i) {
+        mainButtons[i].setSize({btnWidth, btnHeight});
+        mainButtons[i].setPosition({startPos.x + i * (btnWidth + gap), startPos.y});
     }
 }
 
-void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
+void HeapMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
     float innerX = boxX + 15.f;
     float innerY = boxY + 15.f;
     float boxHeight = 80.f;
     float boxWidth = 0.f;
 
-    sf::Color idle = Config::UI::Colors::ButtonIdle;
-    sf::Color hover = Config::UI::Colors::ButtonHover;
-    sf::Color press = Config::UI::Colors::ButtonPressed;
+    sf::Color innerBtnIdle = Config::UI::Colors::ButtonIdle;
+    sf::Color innerBtnHover = Config::UI::Colors::ButtonHover;
+    sf::Color innerBtnPress = Config::UI::Colors::ButtonPressed;
+    sf::Color dropdownHover = Config::UI::Colors::ButtonHover;
+    sf::Color dropdownPress = Config::UI::Colors::ButtonPressed;
 
-    auto createInput = [&](const std::string& placeholder, float x, float w) {
-        activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f}, "", InputType::Integer);
+    auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
+        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
+        dropdownAction->setColors(innerBtnIdle, dropdownHover, dropdownPress, sf::Color::White);
+        dropdownAction->setOptions(options);
+        
+        if (lastDropdownIndex >= 0 && lastDropdownIndex < static_cast<int>(options.size())) {
+            dropdownAction->setSelectedIndex(lastDropdownIndex);
+        } else {
+            dropdownAction->setSelectedIndex(0);
+            lastDropdownIndex = 0;
+        }
+
+        dropdownAction->setLabel(dropdownAction->getSelectedText());
+        return dropdownAction->getSelectedIndex();
+    };
+
+    auto createInput = [&](const std::string& placeholder, float x, float w, InputType inputType = InputType::AnyText) {
+        activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f}, "", inputType);
         activeInputs.back().setPlaceholder(placeholder);
     };
 
-    auto createCustomBtn = [&](const std::string& label, float x, float w = 100.f) { // Increased default width to 100.f
-        activeSubButtons.emplace_back(ctx, label, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
-        activeSubButtons.back().setColors(idle, hover, press, sf::Color::White);
+    auto createExecuteBtn = [&](const std::string& label, float x) {
+        activeSubButtons.emplace_back(ctx, label, sf::Vector2f{x, innerY}, sf::Vector2f{90.f, 45.f});
+        activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
     };
 
     float currentX = innerX;
-    float gap = 50.f; // Increased gap for better breathing room
+    float gap = 15.f; 
 
-    if (type == ActiveMenu::Create) {
-        int sel = lastDropdownIndex; 
-        
-        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{currentX, innerY}, sf::Vector2f{160.f, 45.f});
-        dropdownAction->setColors(idle, hover, press, sf::Color::White);
-        dropdownAction->setOptions({"Random", "File"});
-        dropdownAction->setSelectedIndex(sel >= 0 ? sel : 0);
-        dropdownAction->setLabel(dropdownAction->getSelectedText());
-        
+    // Logic follows the getMainButtonLabels indices
+    if (menuIndex == 0) { // Create
+        int sel = createDropdown({"Random", "File"}, currentX, 160.f);
         currentX += 160.f + gap;
 
         if (sel == 0) { // Random
-            createInput("Size", currentX, 100.f);
-            currentX += 100.f + gap;
-        } 
-        else if (sel == 1) { // File
-            createCustomBtn("Edit", currentX, 100.f);
-            currentX += 100.f + gap;
+            createInput("Size", currentX, 120.f, InputType::Integer);
+            currentX += 120.f + gap;
+            createExecuteBtn("Create", currentX);
+            currentX += 90.f + gap;
+            createExecuteBtn("Heapify", currentX);
+            currentX += 90.f;
+        } else if (sel == 1) { // File
+            activeSubButtons.emplace_back(ctx, "Edit", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
+            activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+            currentX += 90.f + gap;
+            
+            createExecuteBtn("Create", currentX);
+            currentX += 90.f + gap;
+
+            createExecuteBtn("Heapify", currentX);
+            currentX += 90.f;
         }
-
-        createCustomBtn("Create", currentX, 110.f);
-        currentX += 110.f + gap;
-        createCustomBtn("Heapify", currentX, 110.f);
-        currentX += 110.f;
     }
-    else if (type == ActiveMenu::Insert) {
-        createInput("Value", currentX, 140.f);
+    else if (menuIndex == 1) { // Insert
+        createInput("Value", currentX, 140.f, InputType::Integer);
         currentX += 140.f + gap;
-        createCustomBtn("Insert", currentX, 110.f);
-        currentX += 110.f;
+        createExecuteBtn("Insert", currentX);
+        currentX += 90.f;
     }
-    else if (type == ActiveMenu::Remove) {
-        createCustomBtn("Go", currentX, 100.f);
-        currentX += 100.f;
+    else if (menuIndex == 2 || menuIndex == 3) { // Delete Root or Find Maximum
+        createExecuteBtn("Go", currentX);
+        currentX += 90.f;
     }
-    else if (type == ActiveMenu::Search) {
-        createCustomBtn("Go", currentX, 100.f);
-        currentX += 100.f;
-    }
-    // --- Mapped to the 5th button (Clear All) as requested ---
-    else if (type == ActiveMenu::Update) {
-        createCustomBtn("Go", currentX, 100.f);
-        currentX += 100.f;
+    else if (menuIndex == 4) { // Clear All
+        createExecuteBtn("Go", currentX);
+        currentX += 90.f;
     }
 
-    boxWidth = (currentX - boxX) + 25.f; // Added extra padding to prevent edge clipping
+    boxWidth = (currentX - boxX) + 20.f; 
+
     panelBg.setPosition({boxX, boxY});
     panelBg.setSize({boxWidth, boxHeight});
+
+    float windowWidth = static_cast<float>(ctx.window.getSize().x);
+    if (boxX + boxWidth > windowWidth - 20.f) {
+        boxX = windowWidth - boxWidth - 20.f;
+        panelBg.setPosition({boxX, boxY});
+    }
 }
 
 } // namespace UI::Widgets

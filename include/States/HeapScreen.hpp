@@ -21,7 +21,7 @@ private:
 
     bool isRawData; // Added to track the "Create" vs "Heapify" state
 
-    void handleMenuAction(int subBtnIndex);
+    void handleMenuAction();
 
 public:
     explicit HeapScreen(AppContext& context);

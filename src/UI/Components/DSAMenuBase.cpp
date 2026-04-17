@@ -1,142 +1,6 @@
 #include "UI/Components/DSAMenuBase.hpp"
 #include <iostream>
 
-namespace {
-
-    enum class HeapStepType {
-        InsertLastVisual,
-        Compare,
-        OverwriteValue,
-        RemoveLastVisual,
-        ApplyState
-    };
-
-    struct HeapStep {
-        HeapStepType type;
-        int i = -1;
-        int j = -1;
-        int value = 0;
-        std::vector<int> state;
-    };
-
-    int findFirstIndex(const std::vector<int>& a, int val) {
-        for (int i = 0; i < static_cast<int>(a.size()); ++i) {
-            if (a[i] == val) return i;
-        }
-        return -1;
-    }
-
-    void traceHeapifyUp(std::vector<int>& a, int index, std::vector<HeapStep>& steps) {
-        while (index > 0) {
-            int p = (index - 1) / 2;
-
-            steps.push_back({HeapStepType::Compare, p, index});
-
-            if (a[p] < a[index]) {
-                std::swap(a[p], a[index]);
-
-                HeapStep s;
-                s.type = HeapStepType::ApplyState;
-                s.state = a;
-                steps.push_back(std::move(s));
-
-                index = p;
-            } else {
-                break;
-            }
-        }
-    }
-
-    void traceHeapifyDown(std::vector<int>& a, int index, std::vector<HeapStep>& steps) {
-        int n = static_cast<int>(a.size());
-
-        while (true) {
-            int maxIndex = index;
-            int left = 2 * index + 1;
-            int right = 2 * index + 2;
-
-            if (left < n) {
-                steps.push_back({HeapStepType::Compare, index, left});
-                if (a[left] > a[maxIndex]) maxIndex = left;
-            }
-
-            if (right < n) {
-                steps.push_back({HeapStepType::Compare, maxIndex, right});
-                if (a[right] > a[maxIndex]) maxIndex = right;
-            }
-
-            if (maxIndex != index) {
-                std::swap(a[index], a[maxIndex]);
-
-                HeapStep s;
-                s.type = HeapStepType::ApplyState;
-                s.state = a;
-                steps.push_back(std::move(s));
-
-                index = maxIndex;
-            } else {
-                break;
-            }
-        }
-    }
-
-    std::vector<HeapStep> buildInsertSteps(const std::vector<int>& initial, int val) {
-        std::vector<int> a = initial;
-        std::vector<HeapStep> steps;
-
-        a.push_back(val);
-        steps.push_back({HeapStepType::InsertLastVisual, -1, -1, val});
-
-        traceHeapifyUp(a, static_cast<int>(a.size()) - 1, steps);
-        return steps;
-    }
-
-    std::vector<HeapStep> buildDeleteSteps(const std::vector<int>& initial, int val) {
-        std::vector<int> a = initial;
-        std::vector<HeapStep> steps;
-
-        int index = findFirstIndex(a, val);
-        if (index == -1) return steps;
-
-        int lastIndex = static_cast<int>(a.size()) - 1;
-
-        if (index != lastIndex) {
-            steps.push_back({HeapStepType::Compare, index, lastIndex});
-            a[index] = a.back();
-            steps.push_back({HeapStepType::OverwriteValue, index, -1, a[index]});
-        }
-
-        steps.push_back({HeapStepType::RemoveLastVisual});
-        a.pop_back();
-
-        if (index < static_cast<int>(a.size())) {
-            int originalIndex = index;
-            traceHeapifyUp(a, originalIndex, steps);
-            traceHeapifyDown(a, originalIndex, steps);
-        }
-
-        return steps;
-    }
-
-    std::vector<HeapStep> buildUpdateSteps(const std::vector<int>& initial, int oldVal, int newVal) {
-        std::vector<int> a = initial;
-        std::vector<HeapStep> steps;
-
-        int index = findFirstIndex(a, oldVal);
-        if (index == -1) return steps;
-
-        a[index] = newVal;
-        steps.push_back({HeapStepType::OverwriteValue, index, -1, newVal});
-
-        int originalIndex = index;
-        traceHeapifyUp(a, originalIndex, steps);
-        traceHeapifyDown(a, originalIndex, steps);
-
-        return steps;
-    }
-
-} // namespace
-
 namespace UI::Widgets {
 
 DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
@@ -185,31 +49,32 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
-    // btnBack handling is done via public API isBackClicked
-    
-    std::vector<std::string> labels = getMainButtonLabels();
-    // Assuming labels correspond to ActiveMenu enums starting from Create
-    std::vector<ActiveMenu> enums = {
-        ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
-    };
+    // 1. Initialize enabled state vector if not already done
+    if (mainButtonsEnabled.size() != mainButtons.size()) {
+        mainButtonsEnabled.assign(mainButtons.size(), true);
+    }
 
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
+    // 2. Main Button Handling with Locking Guard
+    for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         if (mainButtons[i].isClicked(event)) {
-            ActiveMenu clickedMenu = enums[i];
-            
-            if (clickedMenu == ActiveMenu::Clean) {
-                activeMenu = ActiveMenu::Clean;
+            // THE LOCK: If disabled, ignore the click entirely
+            if (!mainButtonsEnabled[i]) {
+                continue; 
+            }
+
+            if (isInstantAction(i)) {
+                activeMenuIndex = i;
                 goClicked = true; 
             } else {
-                activeMenu = (activeMenu == clickedMenu) ? ActiveMenu::None : clickedMenu;
-                lastDropdownIndex = (activeMenu == ActiveMenu::None) ? -1 : 0;
+                activeMenuIndex = (activeMenuIndex == i) ? -1 : i;
+                lastDropdownIndex = (activeMenuIndex == -1) ? -1 : 0;
             }
             
             updateLayout();
         }
     }
 
+    // 3. Dropdown Handling
     if (dropdownAction && dropdownAction->isClicked(event)) {
         if (dropdownAction->getSelectedIndex() != lastDropdownIndex) {
              dropdownAction->setLabel(dropdownAction->getSelectedText());
@@ -218,6 +83,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 4. Input and Enter Key Handling
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
         bool enterPressed = false;
         if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
@@ -241,6 +107,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 5. Sub-button (Execute/Go) Handling
     if (!activeSubButtons.empty()) {
         for (size_t i = 0; i < activeSubButtons.size(); ++i) {
             if (activeSubButtons[i].isClicked(event)) {
@@ -251,10 +118,10 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 6. Timeline and Speed Controls
     speedSlider.handleEvent(event);
 
     if (!ctx.animManager.empty()) {
-        
         if (btnPlay.isClicked(event)) {
             ctx.animManager.togglePause();   
         }
@@ -268,7 +135,6 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
             ctx.animManager.clearAll();
             ctx.animManager.setPaused(false);
             std::cout << "[INFO] Animation Cancelled.\n";
-
             cancelClicked = true;
         }
     } 
@@ -311,7 +177,7 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     btnBack.draw();
     for (auto& btn : mainButtons) btn.draw();
     
-    if (activeMenu != ActiveMenu::None && activeMenu != ActiveMenu::Clean) {
+    if (activeMenuIndex != -1 && !isInstantAction(activeMenuIndex)) {
         window.draw(panelBg);
         for (auto& input : activeInputs) input.draw();
         for (auto& btn : activeSubButtons) btn.draw();
@@ -354,14 +220,10 @@ void DSAMenuBase::updateLayout() {
     float mainX = 30.f;      
     float mainY = 100.f;
     float gapMain = 5.f;    
-    float buttonWidth = 200.f; 
+    float buttonWidth = 170.f; 
     float buttonHeight = 60.f;
 
     std::vector<std::string> labels = getMainButtonLabels();
-    std::vector<ActiveMenu> enums = {
-        ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
-    };
 
     if (mainButtons.empty()) {
         for (const auto& label : labels) {
@@ -369,9 +231,9 @@ void DSAMenuBase::updateLayout() {
         }
     }
 
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         auto& b = mainButtons[i];
-        bool isActive = (activeMenu == enums[i]);
+        bool isActive = (activeMenuIndex == i);
         b.setPosition({mainX + (buttonWidth + gapMain) * static_cast<float>(i), mainY});
         
         if (isActive) {
@@ -385,21 +247,18 @@ void DSAMenuBase::updateLayout() {
     activeInputs.clear();
     dropdownAction.reset();
 
-    if (activeMenu == ActiveMenu::None || activeMenu == ActiveMenu::Clean) return;
+    if (activeMenuIndex == -1 || isInstantAction(activeMenuIndex)) return;
 
     float boxX = 30.f;
     float boxY = mainY + buttonHeight + 15.f;
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
-        if (activeMenu == enums[i]) {
-            sf::Vector2f btnPos  = mainButtons[i].getPosition();
-            sf::Vector2f btnSize = mainButtons[i].getSize();
-            boxX = btnPos.x;
-            boxY = btnPos.y + btnSize.y + 15.f;
-            break;
-        }
+    if (activeMenuIndex >= 0 && activeMenuIndex < static_cast<int>(mainButtons.size())) {
+        sf::Vector2f btnPos  = mainButtons[activeMenuIndex].getPosition();
+        sf::Vector2f btnSize = mainButtons[activeMenuIndex].getSize();
+        boxX = btnPos.x;
+        boxY = btnPos.y + btnSize.y + 15.f;
     }
 
-    renderSubMenu(boxX, boxY, activeMenu);
+    renderSubMenu(boxX, boxY, activeMenuIndex);
 }
 
 bool DSAMenuBase::consumeGoClicked() {
@@ -418,20 +277,39 @@ bool DSAMenuBase::consumeCancelClicked() {
     return false; 
 }
 
-int DSAMenuBase::consumeClickedSubButtonIndex() {
-    int temp = clickedSubButtonIndex;
-    clickedSubButtonIndex = -1;
-    return temp;
-}
-
 void DSAMenuBase::resetMenu() {
-    activeMenu = ActiveMenu::None;
+    activeMenuIndex = -1;
     lastDropdownIndex = -1;
     updateLayout();
 }
 
 void DSAMenuBase::clearInputs() {
     for (auto& input : activeInputs) input.clear();
+}
+
+
+void DSAMenuBase::setMainButtonEnabled(int index, bool enabled) {
+    // 1. Ensure the state vector is synchronized with the buttons
+    if (mainButtonsEnabled.size() != mainButtons.size()) {
+        mainButtonsEnabled.assign(mainButtons.size(), true);
+    }
+
+    if (index < 0 || index >= static_cast<int>(mainButtons.size())) return;
+
+    mainButtonsEnabled[index] = enabled;
+
+    // 2. Apply visual feedback immediately
+    if (!enabled) {
+        sf::Color grey(70, 70, 70);
+        mainButtons[index].setColors(grey, grey, grey, Config::UI::Colors::ButtonText);
+    } else {
+        mainButtons[index].setColors(
+            Config::UI::Colors::ButtonIdle, 
+            Config::UI::Colors::ButtonHover, 
+            Config::UI::Colors::ButtonPressed, 
+            Config::UI::Colors::ButtonText
+        );
+    }
 }
 
 }

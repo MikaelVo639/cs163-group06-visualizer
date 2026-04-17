@@ -28,20 +28,17 @@ void HeapScreen::handleEvent(const sf::Event& event) {
         ctx.nextState = ScreenState::MainMenu;
     }
 
-    // Capture specific sub-button clicks (mapped in DSAMenuBase)
-    int clickedSubBtn = uiMenu.getClickedSubButtonIndex();
-
-    if (clickedSubBtn != -1 || uiMenu.consumeGoClicked()) {
+    if (uiMenu.consumeGoClicked()) {
         if (myGraph.isAnimating()) {
             std::cout << "[WARNING] Wait!\n";
             return;
         }
         
-        // Use the index for sub-button logic (Create/Heapify/Edit)
-        handleMenuAction(uiMenu.consumeClickedSubButtonIndex());
+        handleMenuAction();
         uiMenu.clearInputs();
-
-        if (uiMenu.getActiveMenu() == UI::Widgets::ActiveMenu::Clean) {
+        
+        // Clean/Clear action is index 4 in getMainButtonLabels
+        if (uiMenu.getActiveMenuIndex() == 4) {
             uiMenu.resetMenu();
         }
     }
@@ -53,30 +50,32 @@ void HeapScreen::handleEvent(const sf::Event& event) {
     }
 }
 
-void HeapScreen::handleMenuAction(int subBtnIndex) {
+void HeapScreen::handleMenuAction() {
     using namespace UI::Widgets;
-    ActiveMenu menu = uiMenu.getActiveMenu();
+    int menuIndex = uiMenu.getActiveMenuIndex();
+    if (menuIndex == -1) return;
+    
     int sel = uiMenu.getDropdownSelection();
     const auto& inputs = uiMenu.getInputs();
 
-    // Guard: Prevent interaction if data isn't heapified (unless creating or cleaning)
-    if (isRawData && menu != ActiveMenu::Create && menu != ActiveMenu::Clean) {
+    // Guard: Prevent heap operations if data isn't heapified (Indices 1, 2, 3)
+    if (isRawData && (menuIndex == 1 || menuIndex == 2 || menuIndex == 3)) {
         std::cout << "[UI LOG] Please Heapify the data first!\n";
         return;
     }
 
-    if (menu == ActiveMenu::Create) {
+    if (menuIndex == 0) { // Create
         if (sel == 0) { // Random
-            if (subBtnIndex == 0) { // "Create" button
+            int subBtn = uiMenu.getClickedSubButtonIndex();
+            if (subBtn == 0) { // Create
                 std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
                 if (sizeStr.empty()) return;
                 controller.handleCreateRandom(std::stoi(sizeStr));
                 isRawData = true;
-                uiMenu.setMainButtonEnabled(1, false); // Grey out Insert
-                uiMenu.setMainButtonEnabled(2, false); // Grey out Delete Root
-                uiMenu.setMainButtonEnabled(3, false); // Grey out Find Max
-            } 
-            else if (subBtnIndex == 1) { // "Heapify" button
+                uiMenu.setMainButtonEnabled(1, false);
+                uiMenu.setMainButtonEnabled(2, false);
+                uiMenu.setMainButtonEnabled(3, false);
+            } else if (subBtn == 1) { // Heapify
                 controller.handleBuildHeap(model.getPool());
                 isRawData = false;
                 uiMenu.setMainButtonEnabled(1, true);
@@ -84,15 +83,15 @@ void HeapScreen::handleMenuAction(int subBtnIndex) {
                 uiMenu.setMainButtonEnabled(3, true);
             }
         } else if (sel == 1) { // File
-            if (subBtnIndex == 0) {
-                controller.handleEditDataFile();
-            } else if (subBtnIndex == 1) { // "Create" button
+            int subBtn = uiMenu.getClickedSubButtonIndex();
+            if (subBtn == 0) controller.handleEditDataFile();
+            else if (subBtn == 1) { // Create
                 controller.handleCreateFromFile();
                 isRawData = true;
                 uiMenu.setMainButtonEnabled(1, false);
                 uiMenu.setMainButtonEnabled(2, false);
                 uiMenu.setMainButtonEnabled(3, false);
-            } else if (subBtnIndex == 2) { // "Heapify" button
+            } else if (subBtn == 2) { // Heapify
                 controller.handleBuildHeap(model.getPool());
                 isRawData = false;
                 uiMenu.setMainButtonEnabled(1, true);
@@ -101,17 +100,17 @@ void HeapScreen::handleMenuAction(int subBtnIndex) {
             }
         }
     }
-    else if (menu == ActiveMenu::Insert) {
+    else if (menuIndex == 1) { // Insert
         if (inputs.empty() || inputs[0].getText().empty()) return;
         controller.handleInsert(std::stoi(inputs[0].getText()));
     }
-    else if (menu == ActiveMenu::Remove) { // Delete Root
+    else if (menuIndex == 2) { // Delete Root
         controller.handleRemoveRoot();
     }
-    else if (menu == ActiveMenu::Search) { // Find Maximum
+    else if (menuIndex == 3) { // Find Maximum
         controller.handleReturnRoot();
     }
-    else if (menu == ActiveMenu::Update) {
+    else if (menuIndex == 4) { // Clear All
         controller.handleClearAll();
         isRawData = false;
         uiMenu.setMainButtonEnabled(1, true);
@@ -123,19 +122,19 @@ void HeapScreen::handleMenuAction(int subBtnIndex) {
 void HeapScreen::update() {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
     uiMenu.update(mousePos);
-
+    
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
         myGraph.resetVisuals();
         controller.forceSnapLayout(); 
         codeViewer.hide();
     }
-
+    
     DSAScreenBase::update();
 }
 
 void HeapScreen::draw() {
-    DSAScreenBase::draw();       // set camera & draw the graph
+    DSAScreenBase::draw(); // set camera & draw the graph
     codeViewer.draw(ctx.window); // Pseudo-code panel (screen-space)
-    uiMenu.draw(ctx.window);     // UI menu on top
+    uiMenu.draw(ctx.window); // UI menu on top
 }
