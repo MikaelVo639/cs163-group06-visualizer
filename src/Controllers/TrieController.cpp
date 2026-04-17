@@ -232,11 +232,11 @@ namespace Controllers {
             return;
         }
 
-        // Smart Parser
-        std::string line;
-        std::vector<std::string> allTokens;
         std::ifstream file(filePath);
+        std::string line;
+        std::vector<std::string> rawTokens;
 
+        // Smart Parser
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
             if (startPos != std::string::npos && line[startPos] == '#') {
@@ -246,70 +246,86 @@ namespace Controllers {
             std::stringstream ss(line);
             std::string token;
             while (ss >> token) {
-                allTokens.push_back(token);
+                rawTokens.push_back(token);
             }
         }
         file.close();
 
-        std::string errorMsg = "";
         int n = -1;
-        std::vector<std::string> parsedData;
+        std::vector<std::string> finalData;
+        std::vector<std::string> warnings;
 
-        if (allTokens.empty()) {
-            errorMsg = "# [WARNING] Could not read 'n'. Please enter the number of words first.\n";
+        if (rawTokens.empty()) {
+            warnings.push_back("# [WARNING] Expected the first value to be an integer 'n' (number of words).\n");
         } else {
             try {
-                n = std::stoi(allTokens[0]);
-                if (n < 0) {
-                    errorMsg = "# [WARNING] Invalid count 'n' = " + std::to_string(n) + " (must be >= 0).\n";
-                } else if (n > 999) {
-                    errorMsg = "# [WARNING] Count 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 999.\n";
-                } else if (allTokens.size() - 1 < static_cast<size_t>(n)) {
-                    errorMsg = "# [WARNING] Expected " + std::to_string(n) + " words, but found only " + std::to_string(allTokens.size() - 1) + ".\n";
-                } else {
-                    for (int i = 1; i <= n; ++i) {
-                        std::string word = allTokens[i];
-                        bool valid = true;
-                        
-                        // Kiểm tra và tự động convert in hoa -> in thường
-                        for (char& c : word) {
-                            if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
-                            if (c < 'a' || c > 'z') { valid = false; break; }
-                        }
-                        
-                        if (!valid) {
-                            errorMsg = "# [WARNING] Word '" + allTokens[i] + "' is invalid. Only English letters (a-z) are allowed.\n";
-                            break;
-                        }
-                        parsedData.push_back(word);
+                n = std::stoi(rawTokens[0]);
+                if (n < 0 || n > 999) {
+                    warnings.push_back("# [WARNING] Count 'n' = " + std::to_string(n) + " is invalid. Allowed range: 0 to 999.\n");
+                } 
+                
+                if (n >= 0) {
+                    int actualCount = rawTokens.size() - 1;
+                    if (actualCount < n) {
+                        warnings.push_back("# [WARNING] Expected n=" + std::to_string(n) + " words, but found only " + std::to_string(actualCount) + ".\n");
+                    } else if (actualCount > n) {
+                        warnings.push_back("# [WARNING] Expected n=" + std::to_string(n) + " words, but found " + std::to_string(actualCount) + ". Extra words will be ignored.\n");
                     }
                 }
             } catch (...) {
-                errorMsg = "# [WARNING] The first value must be an Integer indicating the number of words.\n";
+                warnings.push_back("# [WARNING] Expected the first value to be an integer 'n' (number of words).\n");
+            }
+
+            // Always validate all words
+            for (size_t i = 1; i < rawTokens.size(); ++i) {
+                std::string word = rawTokens[i];
+                bool valid = true;
+                
+                for (char& c : word) {
+                    if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+                    if (c < 'a' || c > 'z') { valid = false; break; }
+                }
+
+                if (n >= 0 && i <= static_cast<size_t>(n)) {
+                    if (!valid) {
+                        warnings.push_back("# [WARNING] Word '" + rawTokens[i] + "' contains invalid characters. Only A-Z or a-z allowed.\n");
+                    } else {
+                        finalData.push_back(word);
+                    }
+                } else if (!valid) {
+                    warnings.push_back("# [WARNING] Word '" + rawTokens[i] + "' contains invalid characters. Only A-Z or a-z allowed.\n");
+                }
             }
         }
 
-        // Báo lỗi và ghi ngược lại vào Notepad
-        if (!errorMsg.empty()) {
+        // Reconstruct file
+        if (!warnings.empty() || (n >= 0 && finalData.size() < static_cast<size_t>(n))) {
             std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
-            std::ifstream inFileForErr(filePath);
-            std::string contentWithWarning = "";
-            bool warningInserted = false;
-
-            if (inFileForErr.is_open()) {
-                std::string l;
-                while (std::getline(inFileForErr, l)) {
-                    if (l.find("# [WARNING]") != std::string::npos) continue;
-                    contentWithWarning += l + "\n";
-                    if (!warningInserted && l.find("# -----------------------------------") != std::string::npos) {
-                        contentWithWarning += errorMsg;
-                        warningInserted = true;
-                    }
+            std::string header = "# --- TRIE VISUALIZER DATA ---\n"
+                                 "# DETAILED INSTRUCTIONS:\n"
+                                 "# 1. Type the number of words 'n' first.\n"
+                                 "# 2. Then type the 'n' words separated by spaces or newlines.\n"
+                                 "#    (Max n is 999. Words must contain ONLY English letters a-z).\n"
+                                 "# 3. Do NOT use numbers, commas (,) or other punctuation marks.\n"
+                                 "# 4. When you are done:\n"
+                                 "#    - Save this file by pressing Ctrl + S\n"
+                                 "#    - Go back to the Application and click the 'Go' button.\n"
+                                 "# -----------------------------------\n";
+            
+            std::string contentWithWarning = header;
+            std::vector<std::string> uniqueWarnings;
+            for (const std::string& w : warnings) {
+                if (std::find(uniqueWarnings.begin(), uniqueWarnings.end(), w) == uniqueWarnings.end()) {
+                    uniqueWarnings.push_back(w);
+                    contentWithWarning += w;
                 }
-                inFileForErr.close();
             }
-
-            if (!warningInserted) contentWithWarning = errorMsg + contentWithWarning;
+            
+            for (size_t i = 0; i < rawTokens.size(); ++i) {
+                contentWithWarning += rawTokens[i];
+                if (i < rawTokens.size() - 1) contentWithWarning += " ";
+            }
+            contentWithWarning += "\n";
 
             std::ofstream outFileErr(filePath);
             if (outFileErr.is_open()) {
@@ -321,15 +337,14 @@ namespace Controllers {
             return;
         }
 
-        // Apply Data hoàn hảo
-        handleClearAll(); // Xóa cũ đi
+        handleClearAll(); 
 
-        for (const std::string& word : parsedData) {
-            model.insert(word); // Nạp ngầm vào RAM
+        for (const std::string& word : finalData) {
+            model.insert(word); 
         }
 
-        syncGraph();          // Ép UI vẽ lên màn hình
-        triggerLayout(0.6f);  // Bay vào vị trí
+        syncGraph();          
+        triggerLayout(0.6f);  
     }
 
     // ==================== INSERT ====================
