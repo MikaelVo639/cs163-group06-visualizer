@@ -10,11 +10,9 @@ namespace UI::Widgets {
         };
 
     protected:
-        // Đổi ActiveMenu type thành int menuIndex
         void renderSubMenu(float boxX, float boxY, int menuIndex) override;
         std::vector<std::string> getMainButtonLabels() const override;
         
-        // Thêm hàm xác định nút bấm "phát ăn ngay"
         bool isInstantAction(int index) const override;
 
     public:

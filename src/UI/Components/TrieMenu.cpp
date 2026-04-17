@@ -57,7 +57,6 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
     float currentX = innerX;
     float gap = 15.f; 
     
-    // Ép kiểu index về enum nội bộ
     Action type = static_cast<Action>(menuIndex);
 
     if (type == Action::Create) {

@@ -187,7 +187,7 @@ namespace Controllers {
                              "# DETAILED INSTRUCTIONS:\n"
                              "# 1. Type the number of words 'n' first.\n"
                              "# 2. Then type the 'n' words separated by spaces or newlines.\n"
-                             "#    (Max n is 15. Words must contain ONLY English letters a-z).\n"
+                             "#    (Max n is 999. Words must contain ONLY English letters a-z).\n"
                              "# 3. Do NOT use numbers, commas (,) or other punctuation marks.\n"
                              "# 4. When you are done:\n"
                              "#    - Save this file by pressing Ctrl + S\n"
@@ -262,8 +262,8 @@ namespace Controllers {
                 n = std::stoi(allTokens[0]);
                 if (n < 0) {
                     errorMsg = "# [WARNING] Invalid count 'n' = " + std::to_string(n) + " (must be >= 0).\n";
-                } else if (n > 15) {
-                    errorMsg = "# [WARNING] Count 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 15.\n";
+                } else if (n > 999) {
+                    errorMsg = "# [WARNING] Count 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 999.\n";
                 } else if (allTokens.size() - 1 < static_cast<size_t>(n)) {
                     errorMsg = "# [WARNING] Expected " + std::to_string(n) + " words, but found only " + std::to_string(allTokens.size() - 1) + ".\n";
                 } else {
