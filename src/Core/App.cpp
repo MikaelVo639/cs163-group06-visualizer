@@ -1,7 +1,7 @@
 #include "Core/App.hpp"
 #include "UI/Widgets/Dropdown.hpp"
 #include "States/LinkedListScreen.hpp"
-#include "States/GraphInputTestScreen.hpp"
+#include "States/MSTScreen.hpp"
 
 
 App::App(): font("assets/fonts/SpaceMono.ttf"),
@@ -17,7 +17,7 @@ App::App(): font("assets/fonts/SpaceMono.ttf"),
                   settings);
 
     window.setFramerateLimit(60);
-    currentScreen = std::make_unique<GraphInputTestScreen>(context);
+    currentScreen = std::make_unique<MenuScreen>(context);
 };
 
 void App::run(){
@@ -65,9 +65,9 @@ void App::changeScreen(ScreenState nextState) {
         // case ScreenState::Trie:
         //     currentScreen = std::make_unique<MenuScreen>(context);
         //     break;
-        // case ScreenState::MST:
-        //     currentScreen = std::make_unique<MenuScreen>(context);
-        //     break;
+        case ScreenState::MST:
+            currentScreen = std::make_unique<MSTScreen>(context);
+            break;
 
         case ScreenState::Exit:
             window.close();

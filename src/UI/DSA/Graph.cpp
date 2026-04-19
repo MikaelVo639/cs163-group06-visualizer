@@ -140,6 +140,13 @@ namespace UI::DSA {
             node->setScale(1.f);
             node->setLabelColor(Config::UI::Colors::NodeText);
         }
+
+        for (auto& edge : edges) {
+            if (!edge) continue;
+
+            edge->setColor(Config::UI::Colors::EdgeFill);
+            edge->setThickness(Config::UI::EDGE_THICKNESS);
+        }
     }
 
     void Graph::handleEvent(const sf::Event& event, sf::Vector2f mousePos) {

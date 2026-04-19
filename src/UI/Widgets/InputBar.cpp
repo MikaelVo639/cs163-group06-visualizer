@@ -2,6 +2,9 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <unordered_map>
+#include <map>
+#include <cmath>
 
 namespace UI::Widgets {
 
@@ -199,7 +202,11 @@ bool InputBar::validateContent() {
                         break;
                     }
 
-                    if (!(nums.size() == 1 || nums.size() == 3)) {
+                    
+                    // cho phép 1 số = node
+                    // cho phép 2 số = đang gõ dở cạnh
+                    // cho phép 3 số = edge
+                    if (nums.empty() || nums.size() > 3) {
                         isValid = false;
                         errorMessage = "Line " + std::to_string(lineNo) + ": use 'x' or 'u v w'";
                         break;
@@ -325,6 +332,7 @@ void InputBar::handleEvent(const sf::Event& event) {
     }
 
     if (!isFocused) return;
+    if (readOnly) return;
 
     if (const auto* textEntered = event.getIf<sf::Event::TextEntered>()) {
         char32_t unicode = textEntered->unicode;
@@ -345,7 +353,7 @@ void InputBar::handleEvent(const sf::Event& event) {
         }
 
         if ((unicode == 13 || unicode == 10) && isMultiline()) {
-            if (content.size() < maxLength) {
+            if (content.size() < maxLength && getCurrentLineCount() < getMaxVisibleLines()) {
                 content.insert(caretPos, 1, '\n');
                 ++caretPos;
                 preferredColumn = -1;
@@ -439,6 +447,10 @@ void InputBar::handleEvent(const sf::Event& event) {
 }
 
 void InputBar::update() {
+    if (readOnly) {
+        showCursor = false;
+    }
+
     if (isFocused) {
         if (cursorClock.getElapsedTime().asSeconds() >= cursorBlinkTime) {
             showCursor = !showCursor;
@@ -880,6 +892,123 @@ void InputBar::moveCaretToMouse(sf::Vector2f mousePos) {
 
     caretPos = lineStart + static_cast<std::size_t>(bestCol);
     preferredColumn = -1;
+}
+
+void InputBar::setReadOnly(bool value) {
+    readOnly = value;
+    if (readOnly) {
+        isFocused = false;
+        showCursor = false;
+    }
+}
+
+bool InputBar::isReadOnly() const {
+    return readOnly;
+}
+
+bool InputBar::parseAutoGraphData(std::vector<int>& nodeValues,
+                                  std::vector<std::tuple<int,int,int>>& edges,
+                                  std::string& outError) const {
+    nodeValues.clear();
+    edges.clear();
+    outError.clear();
+
+    auto lines = getLines(true);
+
+    std::unordered_map<int, int> labelToIndex;
+    std::map<std::pair<int,int>, int> edgeIndexByPair;
+
+    auto ensureNode = [&](int label) -> int {
+        auto it = labelToIndex.find(label);
+        if (it != labelToIndex.end()) return it->second;
+
+        int newIndex = static_cast<int>(nodeValues.size());
+        nodeValues.push_back(label);
+        labelToIndex[label] = newIndex;
+        return newIndex;
+    };
+
+    for (std::size_t lineNo = 0; lineNo < lines.size(); ++lineNo) {
+        const std::string& line = lines[lineNo];
+
+        std::stringstream ss(line);
+        std::vector<int> nums;
+        std::string token;
+
+        while (ss >> token) {
+            try {
+                std::size_t pos = 0;
+                int val = std::stoi(token, &pos);
+                if (pos != token.size()) {
+                    outError = "Line " + std::to_string(lineNo + 1) + ": invalid token";
+                    return false;
+                }
+                nums.push_back(val);
+            } catch (...) {
+                outError = "Line " + std::to_string(lineNo + 1) + ": invalid integer";
+                return false;
+            }
+        }
+
+        if (nums.empty()) continue;
+
+        if (nums.size() == 1) {
+            // tạo node mới nếu chưa có
+            ensureNode(nums[0]);
+        }
+        else if (nums.size() == 2) {
+            // dòng đang gõ dở cạnh -> bỏ qua, KHÔNG fail
+            continue;
+        }
+        else if (nums.size() == 3) {
+            int uLabel = nums[0];
+            int vLabel = nums[1];
+            int w      = nums[2];
+
+            int u = ensureNode(uLabel);
+            int v = ensureNode(vLabel);
+
+            if (u == v) continue; // bỏ self-loop
+
+            auto key = std::minmax(u, v);
+
+            // nếu cạnh đã có thì cập nhật weight
+            auto it = edgeIndexByPair.find(key);
+            if (it != edgeIndexByPair.end()) {
+                edges[it->second] = std::make_tuple(u, v, w);
+            } else {
+                edgeIndexByPair[key] = static_cast<int>(edges.size());
+                edges.emplace_back(u, v, w);
+            }
+        }
+        else {
+            outError = "Line " + std::to_string(lineNo + 1) + ": use 'x' or 'u v w'";
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int InputBar::getCurrentLineCount() const {
+    int count = 1;
+    for (char c : content) {
+        if (c == '\n') ++count;
+    }
+    return count;
+}
+
+int InputBar::getMaxVisibleLines() const {
+    if (!isMultiline()) return 1;
+
+    float paddingY = 10.f;
+    unsigned int charSize = Config::UI::FONT_SIZE_BUTTON;
+    float lineHeight = ctx.font.getLineSpacing(charSize);
+
+    float usableHeight = box.getSize().y - 2.f * paddingY;
+    int maxLines = static_cast<int>(std::floor(usableHeight / lineHeight));
+
+    return std::max(1, maxLines);
 }
 
 }

@@ -79,6 +79,8 @@ namespace UI::Widgets {
         
         void resetMenu();
         void clearInputs();
+
+        std::vector<InputBar>& getInputsMutable() { return activeInputs; }
     };
 
 }

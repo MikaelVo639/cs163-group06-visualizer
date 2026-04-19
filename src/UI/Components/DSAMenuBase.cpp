@@ -76,22 +76,22 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     }
 
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
-        bool enterPressed = false;
-        if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
-            if (keyEvent->code == sf::Keyboard::Key::Enter) {
-                enterPressed = true;
-            }
-        }
-
         bool allInputsValid = true;
+        bool submitted = false;
+
         for (auto& input : activeInputs) {
             input.handleEvent(event);
+
             if (!input.valid()) {
                 allInputsValid = false;
             }
+
+            if (input.isSubmitted(event)) {
+                submitted = true;
+            }
         }
 
-        if (enterPressed && allInputsValid && !activeSubButtons.empty()) {
+        if (submitted && allInputsValid && !activeSubButtons.empty()) {
             goClicked = true;
             clickedSubButtonIndex = static_cast<int>(activeSubButtons.size() - 1);
             activeSubButtons[clickedSubButtonIndex].animateClick();

@@ -77,6 +77,7 @@ private:
     float getLineHeight() const;
     float measureTextWidth(const std::string& s) const;
 
+    bool readOnly = false;
     void moveCaretLeft();
     void moveCaretRight();
     void moveCaretUp();
@@ -84,6 +85,9 @@ private:
     void moveCaretHome();
     void moveCaretEnd();
     void moveCaretToMouse(sf::Vector2f mousePos);
+
+    int getCurrentLineCount() const;
+    int getMaxVisibleLines() const;
 
 public:
     InputBar(AppContext& context,
@@ -121,6 +125,12 @@ public:
                         std::vector<int>& nodeValues,
                         std::vector<std::tuple<int, int, int>>& edges,
                         std::string& outError) const;
+
+    void setReadOnly(bool value);
+    bool isReadOnly() const;
+    bool parseAutoGraphData(std::vector<int>& nodeValues,
+                            std::vector<std::tuple<int,int,int>>& edges,
+                            std::string& outError) const;
 };
 
 }
